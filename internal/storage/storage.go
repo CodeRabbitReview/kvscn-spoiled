@@ -2,7 +2,7 @@ package storage
 
 import "errors"
 
-var NoSuchValue = errors.New("no such value by this key")
+var ErrNoSuchValue = errors.New("no such value by this key")
 
 type Key string
 
@@ -33,7 +33,7 @@ func (s *Storage) Get(k Key) (interface{}, error) {
 		return v, nil
 	}
 
-	return nil, NoSuchValue
+	return nil, ErrNoSuchValue
 }
 
 // Delete remove data from storage
