@@ -2,13 +2,24 @@ package storage
 
 import "errors"
 
-var ErrNoSuchValue = errors.New("no such value by this key")
+var ErrNoSuchKey = errors.New("no such value by this key")
+var ErrNilInput = errors.New("nil error in key data")
+var ErrEmptyKeyString = errors.New("empty key value")
 
 type Key string
 
+// Pair combines a key and input value
 type Pair struct {
 	Key   Key
 	Value interface{}
+}
+
+func (p Pair) emptyKey() bool {
+	return p.Key == ""
+}
+
+func (p Pair) nilInput() bool {
+	return p.Value == nil
 }
 
 type Storage struct {
@@ -22,8 +33,17 @@ func NewStorage() *Storage {
 }
 
 //Put add new value to storage
-func (s *Storage) Put(p *Pair) {
+func (s *Storage) Put(p Pair) error {
+	if p.emptyKey() {
+		return ErrEmptyKeyString
+	}
+	if p.nilInput() {
+		return ErrNilInput
+	}
+
 	s.pairs[p.Key] = p.Value
+
+	return nil
 }
 
 // Get returns a copy of value from storage
@@ -33,7 +53,7 @@ func (s *Storage) Get(k Key) (interface{}, error) {
 		return v, nil
 	}
 
-	return nil, ErrNoSuchValue
+	return nil, ErrNoSuchKey
 }
 
 // Delete remove data from storage
