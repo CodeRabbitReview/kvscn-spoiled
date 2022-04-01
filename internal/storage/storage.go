@@ -1,63 +1,65 @@
 package storage
 
-import "errors"
+import (
+	"github.com/mishaprokop4ik/storage/internal/storage/models"
+	"reflect"
+)
 
-var ErrNoSuchKey = errors.New("no such value by this key")
-var ErrNilInput = errors.New("nil error in key data")
-var ErrEmptyKeyString = errors.New("empty key value")
-
-type Key string
+type Value interface {
+	Type() reflect.Type
+	Entity() interface{}
+}
 
 // Pair combines a key and input value
 type Pair struct {
-	Key   Key
-	Value interface{}
+	Key    Value
+	Entity Value
 }
 
 func (p Pair) emptyKey() bool {
-	return p.Key == ""
+	return p.Key.Entity() == "" || p.Key.Entity() == nil
 }
 
-func (p Pair) nilInput() bool {
-	return p.Value == nil
+func (p Pair) nilEntity() bool {
+	return p.Entity.Entity() == "" || p.Entity.Entity() == nil
 }
 
 type Storage struct {
-	pairs map[Key]interface{}
+	pairs map[Value]Value
 }
 
 func NewStorage() *Storage {
 	return &Storage{
-		pairs: make(map[Key]interface{}),
+		pairs: make(map[Value]Value),
 	}
 }
 
 //Put add new value to storage
 func (s *Storage) Put(p Pair) error {
-	if p.emptyKey() {
-		return ErrEmptyKeyString
-	}
-	if p.nilInput() {
-		return ErrNilInput
+	if p.nilEntity() {
+		return models.ErrNilInput
 	}
 
-	s.pairs[p.Key] = p.Value
+	if p.emptyKey() {
+		return models.ErrEmptyKeyString
+	}
+	s.pairs[p.Key] = p.Entity
 
 	return nil
 }
 
 // Get returns a copy of value from storage
 // If no such data by key returns NoSuchValue error
-func (s *Storage) Get(k Key) (interface{}, error) {
-	if v, ok := s.pairs[k]; ok {
+func (s *Storage) Get(key Value) (Value, error) {
+	if v, ok := s.pairs[key]; ok {
 		return v, nil
 	}
 
-	return nil, ErrNoSuchKey
+	return nil, models.ErrNoSuchKey
 }
 
 // Delete remove data from storage
 // A key is ignored if it does not exist
-func (s *Storage) Delete(k Key) {
-	delete(s.pairs, k)
+func (s *Storage) Delete(key Value) {
+	delete(s.pairs, key)
 }

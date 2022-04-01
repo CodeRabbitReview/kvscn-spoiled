@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"github.com/mishaprokop4ik/storage/internal/storage/models"
 	"reflect"
 	"testing"
 )
@@ -17,36 +18,34 @@ func TestStorage_Put(t *testing.T) {
 		{
 			"nil key",
 			Pair{
-				Key:   "nil",
-				Value: nil,
+				Key:    models.NewKey(nil),
+				Entity: models.NewEntity(nil),
 			},
 			*NewStorage(),
 			*NewStorage(),
-			ErrNilInput,
+			models.ErrNilInput,
 		},
 		{
-			"empty string key",
+			"empty key value",
 			Pair{
-				Key:   "empty string value",
-				Value: "",
+				Key:    models.NewKey(""),
+				Entity: models.NewEntity("empty string value"),
 			},
 			Storage{
-				pairs: map[Key]interface{}{
-					"empty string value": "",
-				},
+				pairs: map[Value]Value{},
 			},
 			*NewStorage(),
-			nil,
+			models.ErrEmptyKeyString,
 		},
 		{
 			"simple string key",
 			Pair{
-				Key:   "simple string",
-				Value: "simple",
+				Key:    models.NewKey("simple string"),
+				Entity: models.NewEntity("simple"),
 			},
 			Storage{
-				pairs: map[Key]interface{}{
-					"simple string": "simple",
+				pairs: map[Value]Value{
+					models.NewKey("simple string"): models.NewEntity("simple"),
 				},
 			},
 			*NewStorage(),
@@ -55,12 +54,12 @@ func TestStorage_Put(t *testing.T) {
 		{
 			"number key",
 			Pair{
-				Key:   "number",
-				Value: 5,
+				Key:    models.NewKey("number"),
+				Entity: models.NewEntity(5),
 			},
 			Storage{
-				pairs: map[Key]interface{}{
-					"number": 5,
+				pairs: map[Value]Value{
+					models.NewKey("number"): models.NewEntity(5),
 				},
 			},
 			*NewStorage(),
@@ -69,12 +68,12 @@ func TestStorage_Put(t *testing.T) {
 		{
 			"slice",
 			Pair{
-				Key:   "slice",
-				Value: []int{1, 2, 3},
+				Key:    models.NewKey("slice"),
+				Entity: models.NewEntity([]int{1, 2, 3}),
 			},
 			Storage{
-				pairs: map[Key]interface{}{
-					"slice": []int{1, 2, 3},
+				pairs: map[Value]Value{
+					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}),
 				},
 			},
 			*NewStorage(),
@@ -83,24 +82,24 @@ func TestStorage_Put(t *testing.T) {
 		{
 			"struct key",
 			Pair{
-				Key: "struct",
-				Value: struct {
+				Key: models.NewKey("struct"),
+				Entity: models.NewEntity(struct {
 					name string
 					age  int
 				}{
 					"misha",
 					20,
-				},
+				}),
 			},
 			Storage{
-				pairs: map[Key]interface{}{
-					"struct": struct {
+				pairs: map[Value]Value{
+					models.NewKey("struct"): models.NewEntity(struct {
 						name string
 						age  int
 					}{
 						"misha",
 						20,
-					},
+					}),
 				},
 			},
 			*NewStorage(),
@@ -112,7 +111,7 @@ func TestStorage_Put(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotErr := tt.gotStorage.Put(tt.input)
 			if !reflect.DeepEqual(gotErr, tt.expectedError) {
-				t.Fatal(gotErr)
+				t.Fatalf("expected error: %v, got %v", tt.expectedError, gotErr)
 			}
 
 			if !reflect.DeepEqual(tt.gotStorage, tt.expectedStorage) {
@@ -125,47 +124,47 @@ func TestStorage_Put(t *testing.T) {
 func TestStorage_Get(t *testing.T) {
 	tests := []struct {
 		name          string
-		key           Key
+		key           Value
 		expectedValue interface{}
 		expectedError error
 		storage       Storage
 	}{
 		{
 			"string return",
-			"string data",
+			models.NewKey("string data"),
 			"data",
 			nil,
 			Storage{
-				pairs: map[Key]interface{}{
-					"string data": "data",
+				pairs: map[Value]Value{
+					models.NewKey("string data"): models.NewEntity("data"),
 				},
 			},
 		},
 		{
 			"int return",
-			"number",
+			models.NewKey("number"),
 			5,
 			nil,
 			Storage{
-				pairs: map[Key]interface{}{
-					"number": 5,
+				pairs: map[Value]Value{
+					models.NewKey("number"): models.NewEntity(5),
 				},
 			},
 		},
 		{
 			"slice return",
-			"slice",
+			models.NewKey("slice"),
 			[]int{1, 2, 3},
 			nil,
 			Storage{
-				pairs: map[Key]interface{}{
-					"slice": []int{1, 2, 3},
+				pairs: map[Value]Value{
+					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}),
 				},
 			},
 		},
 		{
 			"struct return ",
-			"struct",
+			models.NewKey("struct"),
 			struct {
 				name string
 				age  int
@@ -175,24 +174,24 @@ func TestStorage_Get(t *testing.T) {
 			},
 			nil,
 			Storage{
-				pairs: map[Key]interface{}{
-					"struct": struct {
+				pairs: map[Value]Value{
+					models.NewKey("struct"): models.NewEntity(struct {
 						name string
 						age  int
 					}{
 						"misha",
 						20,
-					},
+					}),
 				},
 			},
 		},
 		{
 			"no such key return",
-			"abab",
-			nil,
-			ErrNoSuchKey,
+			models.NewKey("abab"),
+			models.NewEntity(nil),
+			models.ErrNoSuchKey,
 			Storage{
-				pairs: make(map[Key]interface{}),
+				pairs: make(map[Value]Value),
 			},
 		},
 	}
@@ -204,8 +203,7 @@ func TestStorage_Get(t *testing.T) {
 			if !reflect.DeepEqual(err, tt.expectedError) {
 				t.Fatal(err)
 			}
-
-			if !reflect.DeepEqual(got, tt.expectedValue) {
+			if got != nil && !reflect.DeepEqual(got.Entity(), tt.expectedValue) {
 				t.Fatalf("expected value: %v, got %v", tt.expectedValue, got)
 			}
 		})
@@ -215,37 +213,37 @@ func TestStorage_Get(t *testing.T) {
 func TestStorage_Delete(t *testing.T) {
 	tests := []struct {
 		name          string
-		key           Key
+		key           Value
 		storage       Storage
 		expectedError error
 	}{
 		{
 			"simple delete",
-			"key",
+			models.NewKey("key"),
 			Storage{
-				pairs: map[Key]interface{}{
-					"key": "value",
+				pairs: map[Value]Value{
+					models.NewKey("key"): models.NewEntity("value"),
 				},
 			},
-			ErrNoSuchKey,
+			models.ErrNoSuchKey,
 		},
 		{
 			"delete with no such key",
-			"abab",
+			models.NewKey("abab"),
 			Storage{
-				pairs: map[Key]interface{}{
-					"key": "value",
+				pairs: map[Value]Value{
+					models.NewKey("key"): models.NewEntity("value"),
 				},
 			},
-			ErrNoSuchKey,
+			models.ErrNoSuchKey,
 		},
 		{
 			"empty key",
-			"",
+			models.NewKey(""),
 			Storage{
-				pairs: make(map[Key]interface{}),
+				pairs: make(map[Value]Value),
 			},
-			ErrNoSuchKey,
+			models.ErrNoSuchKey,
 		},
 	}
 

@@ -8,22 +8,22 @@
 // There is Pair struct that just combines input key and value.
 // API:
 // err := storage.Put(Pair{
-//		Key:   "simple",
-//		Value: "hello there",
+//		Key:   models.NewKey("simple"),
+//		Entity: models.NewEntity("hello there"),
 //	})
 //
 //	if err != nil {
 //		log.Fatal(err)
 //	}
 // API:
-// value, err := storage.Get("simple")
+// value, err := storage.Get(models.NewKey("simple"))
 //
 //	if err != nil {
 //		log.Fatal(err)
 //	}
 //
 // API:
-// err := storage.Delete("simple")
+// err := storage.Delete(models.NewKey("simple"))
 //
 //	if err != nil {
 //		log.Fatal(err)
