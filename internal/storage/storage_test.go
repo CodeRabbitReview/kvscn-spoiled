@@ -2,7 +2,8 @@
 package storage
 
 import (
-	"github.com/mishaprokop4ik/storage/internal/storage/models"
+	"fmt"
+	"github.com/mishaprokop4ik/storage/internal/models"
 	"reflect"
 	"testing"
 )
@@ -19,7 +20,7 @@ func TestStorage_Put(t *testing.T) {
 			"nil key",
 			Pair{
 				Key:    models.NewKey(nil),
-				Entity: models.NewEntity(nil),
+				Entity: models.NewEntity(nil, nil),
 			},
 			*NewStorage(),
 			*NewStorage(),
@@ -29,23 +30,25 @@ func TestStorage_Put(t *testing.T) {
 			"empty key value",
 			Pair{
 				Key:    models.NewKey(""),
-				Entity: models.NewEntity("empty string value"),
+				Entity: models.NewEntity("empty string key", nil),
 			},
 			Storage{
-				pairs: map[Value]Value{},
+				pairs: map[Keyer]Entitier{},
 			},
-			*NewStorage(),
+			Storage{
+				pairs: map[Keyer]Entitier{},
+			},
 			models.ErrEmptyKeyString,
 		},
 		{
 			"simple string key",
 			Pair{
 				Key:    models.NewKey("simple string"),
-				Entity: models.NewEntity("simple"),
+				Entity: models.NewEntity("simple", nil),
 			},
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("simple string"): models.NewEntity("simple"),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("simple string"): models.NewEntity("simple", nil),
 				},
 			},
 			*NewStorage(),
@@ -55,11 +58,11 @@ func TestStorage_Put(t *testing.T) {
 			"number key",
 			Pair{
 				Key:    models.NewKey("number"),
-				Entity: models.NewEntity(5),
+				Entity: models.NewEntity(5, nil),
 			},
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("number"): models.NewEntity(5),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("number"): models.NewEntity(5, nil),
 				},
 			},
 			*NewStorage(),
@@ -69,11 +72,11 @@ func TestStorage_Put(t *testing.T) {
 			"slice",
 			Pair{
 				Key:    models.NewKey("slice"),
-				Entity: models.NewEntity([]int{1, 2, 3}),
+				Entity: models.NewEntity([]int{1, 2, 3}, nil),
 			},
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}, nil),
 				},
 			},
 			*NewStorage(),
@@ -89,17 +92,17 @@ func TestStorage_Put(t *testing.T) {
 				}{
 					"misha",
 					20,
-				}),
+				}, nil),
 			},
 			Storage{
-				pairs: map[Value]Value{
+				pairs: map[Keyer]Entitier{
 					models.NewKey("struct"): models.NewEntity(struct {
 						name string
 						age  int
 					}{
 						"misha",
 						20,
-					}),
+					}, nil),
 				},
 			},
 			*NewStorage(),
@@ -135,8 +138,8 @@ func TestStorage_Get(t *testing.T) {
 			"data",
 			nil,
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("string data"): models.NewEntity("data"),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("string data"): models.NewEntity("data", nil),
 				},
 			},
 		},
@@ -146,8 +149,8 @@ func TestStorage_Get(t *testing.T) {
 			5,
 			nil,
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("number"): models.NewEntity(5),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("number"): models.NewEntity(5, nil),
 				},
 			},
 		},
@@ -157,8 +160,8 @@ func TestStorage_Get(t *testing.T) {
 			[]int{1, 2, 3},
 			nil,
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}, nil),
 				},
 			},
 		},
@@ -174,24 +177,24 @@ func TestStorage_Get(t *testing.T) {
 			},
 			nil,
 			Storage{
-				pairs: map[Value]Value{
+				pairs: map[Keyer]Entitier{
 					models.NewKey("struct"): models.NewEntity(struct {
 						name string
 						age  int
 					}{
 						"misha",
 						20,
-					}),
+					}, nil),
 				},
 			},
 		},
 		{
 			"no such key return",
 			models.NewKey("abab"),
-			models.NewEntity(nil),
-			models.ErrNoSuchKey,
+			models.NewEntity(nil, nil),
+			fmt.Errorf("no data in storage"),
 			Storage{
-				pairs: make(map[Value]Value),
+				pairs: make(map[Keyer]Entitier),
 			},
 		},
 	}
@@ -221,8 +224,9 @@ func TestStorage_Delete(t *testing.T) {
 			"simple delete",
 			models.NewKey("key"),
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("key"): models.NewEntity("value"),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("key"):     models.NewEntity("value", nil),
+					models.NewKey("new key"): models.NewEntity("value", nil),
 				},
 			},
 			models.ErrNoSuchKey,
@@ -231,19 +235,19 @@ func TestStorage_Delete(t *testing.T) {
 			"delete with no such key",
 			models.NewKey("abab"),
 			Storage{
-				pairs: map[Value]Value{
-					models.NewKey("key"): models.NewEntity("value"),
+				pairs: map[Keyer]Entitier{
+					models.NewKey("key"): models.NewEntity("value", nil),
 				},
 			},
 			models.ErrNoSuchKey,
 		},
 		{
-			"empty key",
+			"empty storage",
 			models.NewKey(""),
 			Storage{
-				pairs: make(map[Value]Value),
+				pairs: make(map[Keyer]Entitier),
 			},
-			models.ErrNoSuchKey,
+			fmt.Errorf("no data in storage"),
 		},
 	}
 
@@ -253,7 +257,7 @@ func TestStorage_Delete(t *testing.T) {
 
 			_, err := tt.storage.Get(tt.key)
 			if !reflect.DeepEqual(err, tt.expectedError) {
-				t.Fatal(err)
+				t.Fatalf("expected error: %v, got %v", tt.expectedError, err)
 			}
 		})
 	}

@@ -1,7 +1,9 @@
 package storage
 
 import (
-	"github.com/mishaprokop4ik/storage/internal/storage/models"
+	"encoding/json"
+	"fmt"
+	"github.com/mishaprokop4ik/storage/internal/models"
 	"reflect"
 )
 
@@ -10,27 +12,42 @@ type Value interface {
 	Entity() interface{}
 }
 
+type Keyer interface {
+	Value
+}
+
+type Entitier interface {
+	Value
+	JSON() json.RawMessage
+}
+
 // Pair combines a key and input value
 type Pair struct {
-	Key    Value
-	Entity Value
+	Key    Keyer
+	Entity Entitier
 }
 
 func (p Pair) emptyKey() bool {
-	return p.Key.Entity() == "" || p.Key.Entity() == nil
+	if v, ok := p.Key.Entity().(string); ok {
+		return v == ""
+	}
+	return p.Key.Entity() == nil
 }
 
 func (p Pair) nilEntity() bool {
-	return p.Entity.Entity() == "" || p.Entity.Entity() == nil
+	if v, ok := p.Entity.Entity().(string); ok {
+		return v == ""
+	}
+	return p.Entity.Entity() == nil
 }
 
 type Storage struct {
-	pairs map[Value]Value
+	pairs map[Keyer]Entitier
 }
 
 func NewStorage() *Storage {
 	return &Storage{
-		pairs: make(map[Value]Value),
+		pairs: make(map[Keyer]Entitier),
 	}
 }
 
@@ -50,7 +67,10 @@ func (s *Storage) Put(p Pair) error {
 
 // Get returns a copy of value from storage
 // If no such data by key returns NoSuchValue error
-func (s *Storage) Get(key Value) (Value, error) {
+func (s *Storage) Get(key Keyer) (Entitier, error) {
+	if len(s.pairs) == 0 {
+		return nil, fmt.Errorf("no data in storage")
+	}
 	if v, ok := s.pairs[key]; ok {
 		return v, nil
 	}
@@ -60,6 +80,21 @@ func (s *Storage) Get(key Value) (Value, error) {
 
 // Delete remove data from storage
 // A key is ignored if it does not exist
-func (s *Storage) Delete(key Value) {
+func (s *Storage) Delete(key Keyer) error {
+	fmt.Println(key.Entity(), len(s.pairs) == 0)
+	if len(s.pairs) == 0 {
+		return fmt.Errorf("no data in storage")
+	}
+	if _, ok := s.pairs[key]; !ok {
+		return models.ErrNoSuchKey
+	}
 	delete(s.pairs, key)
+	return nil
+}
+
+func (s *Storage) GetAll() (map[Keyer]Entitier, error) {
+	if len(s.pairs) == 0 {
+		return nil, fmt.Errorf("no data in storage")
+	}
+	return s.pairs, nil
 }
