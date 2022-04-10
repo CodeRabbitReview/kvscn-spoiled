@@ -54,6 +54,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	allData, err := s.Storage.GetAll()
 	if err != nil {
 		SendResponse(w, Response{
@@ -82,6 +83,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	url := strings.Replace(r.URL.String(), "/api/", "", 1)
 	param := models.NewKey(strings.Split(url, "/")[0])
 	data, err := s.Storage.Get(param)
@@ -100,6 +102,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := GetBody(r)
 	if err != nil {
 		SendResponse(w, Response{
@@ -123,6 +126,7 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Storage) Delete(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	url := strings.Replace(r.URL.String(), "/api/", "", 1)
 	param := models.NewKey(strings.Split(url, "/")[0])
 	err := s.Storage.Delete(param)
