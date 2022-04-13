@@ -21,7 +21,7 @@ type Entitier interface {
 	JSON() json.RawMessage
 }
 
-// Pair combines a key and input value
+// Pair combines a Keyer and input Entitier interfaces
 type Pair struct {
 	Key    Keyer
 	Entity Entitier
@@ -29,14 +29,14 @@ type Pair struct {
 
 func (p Pair) emptyKey() bool {
 	if v, ok := p.Key.Entity().(string); ok {
-		return v == ""
+		return v == "" || v == "{}" || v == "<nil>"
 	}
 	return p.Key.Entity() == nil
 }
 
 func (p Pair) nilEntity() bool {
 	if v, ok := p.Entity.Entity().(string); ok {
-		return v == ""
+		return v == "" || v == "{}" || v == "<nil>"
 	}
 	return p.Entity.Entity() == nil
 }
@@ -51,14 +51,15 @@ func NewStorage() *Storage {
 	}
 }
 
-//Put add new value to storage
+//Put add new value to storage or update old value by key
+//If key or value is empty - return errors models.ErrNilInput and models.ErrEmptyKey
 func (s *Storage) Put(p Pair) error {
 	if p.nilEntity() {
 		return models.ErrNilInput
 	}
 
 	if p.emptyKey() {
-		return models.ErrEmptyKeyString
+		return models.ErrEmptyKey
 	}
 	s.pairs[p.Key] = p.Entity
 
@@ -66,7 +67,8 @@ func (s *Storage) Put(p Pair) error {
 }
 
 // Get returns a copy of value from storage
-// If no such data by key returns NoSuchValue error
+// If no such data by key returns models.ErrNilInput error
+// If there is not any data in storage returns no data in storage error
 func (s *Storage) Get(key Keyer) (Entitier, error) {
 	if len(s.pairs) == 0 {
 		return nil, fmt.Errorf("no data in storage")
@@ -79,9 +81,9 @@ func (s *Storage) Get(key Keyer) (Entitier, error) {
 }
 
 // Delete remove data from storage
-// A key is ignored if it does not exist
+// If there is not any data by key
+// If there is not any data in storage returns no data in storage error
 func (s *Storage) Delete(key Keyer) error {
-	fmt.Println(key.Entity(), len(s.pairs) == 0)
 	if len(s.pairs) == 0 {
 		return fmt.Errorf("no data in storage")
 	}
@@ -92,6 +94,8 @@ func (s *Storage) Delete(key Keyer) error {
 	return nil
 }
 
+// GetAll returns all data from storage
+// If there is not any data in storage returns no data in storage error
 func (s *Storage) GetAll() (map[Keyer]Entitier, error) {
 	if len(s.pairs) == 0 {
 		return nil, fmt.Errorf("no data in storage")

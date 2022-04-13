@@ -1,8 +1,11 @@
 GOLINT := golangci-lint
 BIN_NAME := storage
 
-test: ## run all test
-	go test -cover ./...
+cover: ## run all test with coverage out
+	go test -v -coverprofile out/cover.out ./...
+	go tool cover -html=out/cover.out -o out/cover.html
+test: ## run tests
+	go test --cover ./...
 lint: ## lint the files local env
 	$(GOLINT) run --timeout=5m -c .golangci.yml
 fmt: ## fmt project

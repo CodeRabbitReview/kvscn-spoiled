@@ -6,12 +6,19 @@ import (
 	"time"
 )
 
+// HTTPServer represents connected Server, Logger and Handler
+//
+// Server is a http.Server struct.
+// Logger is a log.Logger struct
+// Handler is an interface http.Handler
+// it responds to an HTTP request
 type HTTPServer struct {
-	Server   *http.Server
-	Logger   *log.Logger
-	Handlers http.Handler
+	Server  *http.Server
+	Logger  *log.Logger
+	Handler http.Handler
 }
 
+// NewHTTPServer is a constructor of HTTPServer
 func NewHTTPServer(l *log.Logger, h http.Handler) *HTTPServer {
 	return &HTTPServer{Server: &http.Server{
 		Addr:           ":8080",
@@ -20,5 +27,5 @@ func NewHTTPServer(l *log.Logger, h http.Handler) *HTTPServer {
 		WriteTimeout:   60 * time.Second,
 		IdleTimeout:    10 * time.Second,
 		MaxHeaderBytes: 0,
-	}, Logger: l, Handlers: h}
+	}, Logger: l, Handler: h}
 }

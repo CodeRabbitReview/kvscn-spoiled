@@ -10,40 +10,44 @@ import (
 	"net/http"
 )
 
-type Response struct {
+type response struct {
 	Data       interface{} `json:"response"`
 	StatusCode int         `json:"-"`
 }
 
-func SendResponse(w http.ResponseWriter, data Response, logger *log.Logger) {
+func sendResponse(w http.ResponseWriter, data response, logger *log.Logger) {
+	w.WriteHeader(data.StatusCode)
 	if v, ok := data.Data.([]byte); ok {
 		if data.Data != nil {
 			if _, err := w.Write(v); err != nil {
-				logger.Fatal(err)
+				if logger != nil {
+					logger.Fatal(err)
+				}
 			}
 		}
-		w.WriteHeader(data.StatusCode)
 		return
 	}
 
 	resp, err := json.Marshal(data)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		if _, err = w.Write([]byte(err.Error())); err != nil {
 			logger.Fatal(err)
 		}
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if data.Data != nil {
 		if _, err = w.Write(resp); err != nil {
-			logger.Fatal(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			if logger != nil {
+				logger.Fatal(err)
+			}
 		}
 	}
-	w.WriteHeader(data.StatusCode)
 }
 
-func GetBody(r *http.Request) (storage.Pair, error) {
+func getBody(r *http.Request) (storage.Pair, error) {
 	defer r.Body.Close()
 	type pair struct {
 		Key    interface{}
@@ -54,7 +58,6 @@ func GetBody(r *http.Request) (storage.Pair, error) {
 	if err != nil {
 		return storage.Pair{}, err
 	}
-	r.Body.Close()
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	err = json.NewDecoder(r.Body).Decode(&p)
 	if err != nil {

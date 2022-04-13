@@ -38,7 +38,7 @@ func TestStorage_Put(t *testing.T) {
 			Storage{
 				pairs: map[Keyer]Entitier{},
 			},
-			models.ErrEmptyKeyString,
+			models.ErrEmptyKey,
 		},
 		{
 			"simple string key",
@@ -207,6 +207,63 @@ func TestStorage_Get(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got != nil && !reflect.DeepEqual(got.Entity(), tt.expectedValue) {
+				t.Fatalf("expected value: %v, got %v", tt.expectedValue, got)
+			}
+		})
+	}
+}
+
+func TestStorage_GetAll(t *testing.T) {
+	tests := []struct {
+		name          string
+		expectedValue interface{}
+		expectedError error
+		storage       Storage
+	}{
+		{
+			"empty storage",
+			"",
+			fmt.Errorf("no data in storage"),
+			Storage{
+				pairs: map[Keyer]Entitier{},
+			},
+		},
+		{
+			"with one value",
+			map[Keyer]Entitier{
+				models.NewKey("number"): models.NewEntity(5, nil),
+			},
+			nil,
+			Storage{
+				pairs: map[Keyer]Entitier{
+					models.NewKey("number"): models.NewEntity(5, nil),
+				},
+			},
+		},
+		{
+			"with many values",
+			map[Keyer]Entitier{
+				models.NewKey("number"): models.NewEntity(5, nil),
+				models.NewKey("string"): models.NewEntity("misha", nil),
+			},
+			nil,
+			Storage{
+				pairs: map[Keyer]Entitier{
+					models.NewKey("number"): models.NewEntity(5, nil),
+					models.NewKey("string"): models.NewEntity("misha", nil),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.storage.GetAll()
+
+			if !reflect.DeepEqual(err, tt.expectedError) {
+				t.Fatal(err)
+			}
+			if got != nil && !reflect.DeepEqual(got, tt.expectedValue) {
 				t.Fatalf("expected value: %v, got %v", tt.expectedValue, got)
 			}
 		})
