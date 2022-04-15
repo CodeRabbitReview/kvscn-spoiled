@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -55,7 +56,6 @@ func NewStorage(l *log.Logger, s Storager) *Storage {
 // id can be any value
 // if URL is incorrect returns http.StatusNotFound and nothing in body
 func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	url := r.URL.String()
 
 	if !strings.HasPrefix(url, "/api/") {
@@ -88,6 +88,10 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case false:
+		if r.Method == http.MethodGet && url == "out" {
+			s.OutHTML(w, r)
+			return
+		}
 		if r.Method == http.MethodDelete {
 			s.Delete(w, r)
 			return
@@ -104,6 +108,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // response is an array of JSON objects
 // if no value in storage returns no data in storage error
 func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	allStorageData, err := s.storage.GetAll()
 	if err != nil {
 		sendResponse(w, response{
@@ -139,6 +144,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 // if no value in storage returns no data in storage error
 // Get takes first param from URL from http.Request
 func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	url := strings.Replace(r.URL.String(), "/api/", "", 1)
 	param := models.NewKey(strings.Split(url, "/")[0])
 	data, err := s.storage.Get(param)
@@ -167,6 +173,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 // Spaces before and after will be removed
 // spaces between words will be changed to _ symbol
 func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getBody(r)
 	if err != nil {
 		sendResponse(w, response{
@@ -197,7 +204,8 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 // it calls Storager.Delete
 // if some error appears http.StatusInternalServerError
 // if everything is OK returns http.StatusNoContent and nothing in body
-func (s Storage) Delete(w http.ResponseWriter, r *http.Request) {
+func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	url := strings.Replace(r.URL.String(), "/api/", "", 1)
 	param := models.NewKey(strings.Split(url, "/")[0])
 	err := s.storage.Delete(param)
@@ -212,4 +220,42 @@ func (s Storage) Delete(w http.ResponseWriter, r *http.Request) {
 	sendResponse(w, response{
 		StatusCode: http.StatusNoContent,
 	}, s.log)
+}
+
+// OutHTML takes all data from Storage
+// takes html file and parse in this html file all got data.
+// If no data in storage - will be printed such text.
+// If there is any data in storage - will be printed table with data.
+func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html;charset=utf-8")
+
+	t, err := template.ParseFiles("./internal/http_server/handlers/static/index.gohtml")
+	if err != nil {
+		sendResponse(w, response{
+			Data:       err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, s.log)
+		return
+	}
+
+	type data struct {
+		Data map[string]interface{}
+	}
+	allStorageData, _ := s.storage.GetAll()
+	var resp = data{
+		Data: make(map[string]interface{}),
+	}
+	for k, e := range allStorageData {
+		keyString, _ := k.Entity().(string)
+		resp.Data[keyString] = e.Entity()
+	}
+
+	err = t.Execute(w, resp)
+	if err != nil {
+		sendResponse(w, response{
+			Data:       err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, s.log)
+		return
+	}
 }
