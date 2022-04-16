@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var indexPath = "./internal/http_server/handlers/static/index.gohtml"
+
 // Storager should implement 4 methods of common operations:
 // getting all data, getting by id, putting new data, deleting
 // Storager should implement:
@@ -228,11 +230,11 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 // If there is any data in storage - will be printed table with data.
 func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html;charset=utf-8")
-
-	t, err := template.ParseFiles("./internal/http_server/handlers/static/index.gohtml")
+	t, err := template.ParseFiles(indexPath)
 	if err != nil {
+		s.log.Println(err)
 		sendResponse(w, response{
-			Data:       err.Error(),
+			Data:       nil,
 			StatusCode: http.StatusInternalServerError,
 		}, s.log)
 		return
@@ -253,7 +255,7 @@ func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
 	err = t.Execute(w, resp)
 	if err != nil {
 		sendResponse(w, response{
-			Data:       err.Error(),
+			Data:       nil,
 			StatusCode: http.StatusInternalServerError,
 		}, s.log)
 		return

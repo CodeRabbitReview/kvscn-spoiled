@@ -7,12 +7,19 @@ import (
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+// changeIndexPath only for test usage
+func changeIndexPath(p string) {
+	indexPath = p
+}
 
 func TestServeHTTP(t *testing.T) {
 	tests := []struct {
@@ -498,6 +505,335 @@ func TestDelete(t *testing.T) {
 
 			if !reflect.DeepEqual(w.Code, tt.expectedStatusCode) {
 				t.Errorf("Test failed %s expected code: %v, got: %v", tt.name, tt.expectedStatusCode, w.Code)
+			}
+		})
+	}
+}
+
+func TestOutHTMLWithoutData(t *testing.T) {
+	s := storage.NewStorage()
+	storageServer := NewStorage(nil, s)
+	changeIndexPath("static/index.gohtml")
+	tests := []struct {
+		name        string
+		expectedOut string
+	}{
+		{
+			name: "empty input",
+			expectedOut: `<!DOCTYPE HTML>
+        <html>
+        <head>
+            <title>Storage</title>
+            <style>
+                .storage_out {
+                    font-family: arial, sans-serif;
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+        
+                .storage_out-data, .storage_out-header {
+                    border: 1px solid #dddddd;
+                    text-align: left;
+                    padding: 8px;
+                }
+        
+                .storage_out-row:nth-child(even) {
+                    background-color: #dddddd;
+                }
+            </style>
+        </head>
+        <body>
+        <header>
+            <h1>
+                Key value storage
+            </h1>
+        </header>
+        <div class="main">
+            <table class="storage_out">
+                
+                
+                    <div class="empty_storage">
+                        The key value storage is empty
+                    </div>
+                
+        
+                
+            </table>
+        </div>
+        </body>
+        </html>`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/out", nil)
+			w := httptest.NewRecorder()
+			handler := http.HandlerFunc(storageServer.ServeHTTP)
+			handler.ServeHTTP(w, req)
+			if !reflect.DeepEqual(strings.ReplaceAll(w.Body.String(), " ", ""),
+				strings.ReplaceAll(tt.expectedOut, " ", "")) {
+				t.Errorf("Test failed %s with rendering expected: %s, got: %s", tt.name,
+					tt.expectedOut, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestOutHTMLWithOneData(t *testing.T) {
+	s := storage.NewStorage()
+	s.Put(storage.Pair{
+		Key: models.NewKey("person"),
+		Entity: models.NewEntity(map[string]interface{}{
+			"age":  20,
+			"name": "misha",
+		}, []byte(`{
+    "key": "person",
+    "entity": {
+        "name": "misha",
+        "age": 20
+    }
+}`)),
+	})
+	storageServer := NewStorage(nil, s)
+	changeIndexPath("static/index.gohtml")
+	tests := []struct {
+		name        string
+		expectedOut string
+	}{
+		{
+			name: "one data",
+			expectedOut: `<!DOCTYPE HTML>
+        <html>
+        <head>
+            <title>Storage</title>
+            <style>
+                .storage_out {
+                    font-family: arial, sans-serif;
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+        
+                .storage_out-data, .storage_out-header {
+                    border: 1px solid #dddddd;
+                    text-align: left;
+                    padding: 8px;
+                }
+        
+                .storage_out-row:nth-child(even) {
+                    background-color: #dddddd;
+                }
+            </style>
+        </head>
+        <body>
+        <header>
+            <h1>
+                Key value storage
+            </h1>
+        </header>
+        <div class="main">
+            <table class="storage_out">
+                
+                
+        
+                
+                    <tr class="storage_out-row">
+                        <th class="storage_out-header">
+                            Key
+                        </th>
+                        <th class="storage_out-header">
+                            Entity
+                        </th>
+                    </tr>
+                        <tr class="storage_out-row">
+                            <td class="storage_out-data">
+                                person
+                            </td>
+                            <td class="storage_out-data">
+                                map[age:20 name:misha]
+                            </td>
+                        </tr>
+                    
+                
+            </table>
+        </div>
+        </body>
+        </html>`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/out", nil)
+			w := httptest.NewRecorder()
+			handler := http.HandlerFunc(storageServer.ServeHTTP)
+			handler.ServeHTTP(w, req)
+			if !reflect.DeepEqual(strings.ReplaceAll(w.Body.String(), " ", ""),
+				strings.ReplaceAll(tt.expectedOut, " ", "")) {
+				t.Errorf("Test failed %s with rendering expected: %s, got: %s", tt.name,
+					tt.expectedOut, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestOutHTMLWithManyData(t *testing.T) {
+	s := storage.NewStorage()
+	s.Put(storage.Pair{
+		Key: models.NewKey("students"),
+		Entity: models.NewEntity(map[string][]map[string]string{
+			"students": {
+				map[string]string{
+					"name": "misha",
+				},
+				map[string]string{
+					"name": "dasha",
+				},
+			},
+		}, []byte(`{
+    "key": "students",
+    "entity": {
+        "students": [
+            {
+                "name": "misha"
+            }, 
+            {
+                "name": "dasha"
+            }
+        ]
+    }
+}
+}`)),
+	})
+	s.Put(storage.Pair{
+		Key: models.NewKey("teacher"),
+		Entity: models.NewEntity(map[string]string{
+			"name": "sergei",
+		}, []byte(`{
+    "key": "teacher",
+    "entity": {
+        "name": "sergei",
+    }
+}`)),
+	})
+	storageServer := NewStorage(nil, s)
+	changeIndexPath("static/index.gohtml")
+	tests := []struct {
+		name        string
+		expectedOut string
+	}{
+		{
+			name: "multiply data from storage",
+			expectedOut: `<!DOCTYPE HTML>
+        <html>
+        <head>
+            <title>Storage</title>
+            <style>
+                .storage_out {
+                    font-family: arial, sans-serif;
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+        
+                .storage_out-data, .storage_out-header {
+                    border: 1px solid #dddddd;
+                    text-align: left;
+                    padding: 8px;
+                }
+        
+                .storage_out-row:nth-child(even) {
+                    background-color: #dddddd;
+                }
+            </style>
+        </head>
+        <body>
+        <header>
+            <h1>
+                Key value storage
+            </h1>
+        </header>
+        <div class="main">
+            <table class="storage_out">
+                
+                
+        
+                
+                    <tr class="storage_out-row">
+                        <th class="storage_out-header">
+                            Key
+                        </th>
+                        <th class="storage_out-header">
+                            Entity
+                        </th>
+                    </tr>
+                        <tr class="storage_out-row">
+                            <td class="storage_out-data">
+                                students
+                            </td>
+                            <td class="storage_out-data">
+                                map[students:[map[name:misha] map[name:dasha]]]
+                            </td>
+                        </tr>
+                    
+                        <tr class="storage_out-row">
+                            <td class="storage_out-data">
+                                teacher
+                            </td>
+                            <td class="storage_out-data">
+                                map[name:sergei]
+                            </td>
+                        </tr>
+                    
+                
+            </table>
+        </div>
+        </body>
+        </html>`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/out", nil)
+			w := httptest.NewRecorder()
+			handler := http.HandlerFunc(storageServer.ServeHTTP)
+			handler.ServeHTTP(w, req)
+			if !reflect.DeepEqual(strings.ReplaceAll(w.Body.String(), " ", ""),
+				strings.ReplaceAll(tt.expectedOut, " ", "")) {
+				t.Errorf("Test failed %s with rendering expected: %s, got: %s", tt.name,
+					tt.expectedOut, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestOutHTMLEmptyHTMLPath(t *testing.T) {
+	s := storage.NewStorage()
+	storageServer := NewStorage(log.New(os.Stdout, "storage", log.LstdFlags), s)
+	changeIndexPath("")
+	tests := []struct {
+		name        string
+		expectedOut string
+	}{
+		{
+			name:        "empty html path",
+			expectedOut: ``,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/out", nil)
+			w := httptest.NewRecorder()
+			handler := http.HandlerFunc(storageServer.ServeHTTP)
+			handler.ServeHTTP(w, req)
+			if !reflect.DeepEqual(strings.ReplaceAll(w.Body.String(), " ", ""),
+				strings.ReplaceAll(tt.expectedOut, " ", "")) {
+				t.Errorf("Test failed %s with rendering expected: %s, got: %s", tt.name,
+					tt.expectedOut, w.Body.String())
+			}
+			if !reflect.DeepEqual(w.Code, http.StatusInternalServerError) {
+				t.Errorf("Test failed %s with rendering expected status code: %d, got: %d", tt.name, http.StatusInternalServerError, w.Code)
 			}
 		})
 	}
