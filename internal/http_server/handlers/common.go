@@ -47,7 +47,7 @@ func sendResponse(w http.ResponseWriter, data response, logger *log.Logger) {
 	}
 }
 
-func getBody(r *http.Request) (storage.Pair, error) {
+func getPairFromBody(r *http.Request) (storage.Pair, error) {
 	defer r.Body.Close()
 	type pair struct {
 		Key    interface{}
