@@ -139,9 +139,15 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 // if no value in storage returns no data in storage error
 // Get takes first param from URL from http.Request
 func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
-	url := strings.Replace(r.URL.String(), "/api/", "", 1)
-	param := models.NewKey(strings.Split(url, "/")[0])
-	data, err := s.storage.Get(param)
+	pair, err := getPairFromBody(r)
+	if err != nil {
+		sendResponse(w, response{
+			Data:       err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, s.log)
+		return
+	}
+	data, err := s.storage.Get(pair.Key)
 	if err != nil {
 		sendResponse(w, response{
 			Data:       err.Error(),
@@ -167,7 +173,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 // Spaces before and after will be removed
 // spaces between words will be changed to _ symbol
 func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
-	pair, err := getBody(r)
+	pair, err := getPairFromBody(r)
 	if err != nil {
 		sendResponse(w, response{
 			Data:       err.Error(),
