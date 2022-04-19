@@ -123,7 +123,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 	var resp = "["
 	var i = 0
 	for _, data := range allStorageData {
-		v := data.JSON()[:]
+		v := data.JSON()
 		if i != len(allStorageData)-1 {
 			resp += string(v) + ", "
 		} else {
@@ -132,7 +132,6 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 		i++
 	}
 	resp += "]"
-
 	sendResponse(w, response{
 		Data:       []byte(resp),
 		StatusCode: http.StatusOK,

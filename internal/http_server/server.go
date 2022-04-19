@@ -13,19 +13,23 @@ import (
 // Handler is an interface http.Handler
 // it responds to an HTTP request
 type HTTPServer struct {
-	Server  *http.Server
-	Logger  *log.Logger
-	Handler http.Handler
+	server  *http.Server
+	logger  *log.Logger
+	handler http.Handler
 }
 
 // NewHTTPServer is a constructor of HTTPServer
 func NewHTTPServer(l *log.Logger, h http.Handler) *HTTPServer {
-	return &HTTPServer{Server: &http.Server{
+	return &HTTPServer{server: &http.Server{
 		Addr:           ":8080",
 		Handler:        h,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   60 * time.Second,
 		IdleTimeout:    10 * time.Second,
 		MaxHeaderBytes: 0,
-	}, Logger: l, Handler: h}
+	}, logger: l, handler: h}
+}
+
+func (s *HTTPServer) Run() error {
+	return s.server.ListenAndServe()
 }

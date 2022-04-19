@@ -4,7 +4,7 @@
 // Storage.GetAll takes all value from Storage. If no value in storage returns error
 // Storage.Put push value into storage and returns error if key or entity is not valid.
 // Validation checks key and entity not nil value
-// Storage.Delete remove value from database if no data into storage or
+// Storage.Delete removes value from database if no data into storage or
 // no data by this key - sends error
 // err := Storage.Put(Pair{
 //		Key:   models.NewKey("simple"),

@@ -40,5 +40,5 @@
 // If everything is OK data by input key will be removed.
 // Storage.OutHTML takes all data from storage and make html file with all data
 // If some errors appears in making template or sending error
-// Server log error and send http.StatusInternalServerError to client
+// Server log error and sends http.StatusInternalServerError to client
 package handlers

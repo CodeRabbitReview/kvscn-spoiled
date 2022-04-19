@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"reflect"
+	"sync"
 )
 
 type Value interface {
@@ -43,15 +44,17 @@ func (p Pair) nilEntity() bool {
 
 type Storage struct {
 	pairs map[Keyer]Entitier
+	mu    *sync.Mutex
 }
 
 func NewStorage() *Storage {
 	return &Storage{
 		pairs: make(map[Keyer]Entitier),
+		mu:    &sync.Mutex{},
 	}
 }
 
-//Put add new value to storage or update old value by key
+//Put adds new value to storage or update old value by key
 //If key or value is empty - return errors models.ErrNilInput and models.ErrEmptyKey
 func (s *Storage) Put(p Pair) error {
 	if p.nilEntity() {
@@ -61,6 +64,8 @@ func (s *Storage) Put(p Pair) error {
 	if p.emptyKey() {
 		return models.ErrEmptyKey
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.pairs[p.Key] = p.Entity
 
 	return nil
@@ -70,6 +75,8 @@ func (s *Storage) Put(p Pair) error {
 // If no such data by key returns models.ErrNilInput error
 // If there is not any data in storage returns no data in storage error
 func (s *Storage) Get(key Keyer) (Entitier, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if len(s.pairs) == 0 {
 		return nil, fmt.Errorf("no data in storage")
 	}
@@ -80,10 +87,12 @@ func (s *Storage) Get(key Keyer) (Entitier, error) {
 	return nil, models.ErrNoSuchKey
 }
 
-// Delete remove data from storage
+// Delete removes data from storage
 // If there is not any data by key
 // If there is not any data in storage returns no data in storage error
 func (s *Storage) Delete(key Keyer) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if len(s.pairs) == 0 {
 		return fmt.Errorf("no data in storage")
 	}
