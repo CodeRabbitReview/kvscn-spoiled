@@ -176,7 +176,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 // spaces between words will be changed to _ symbol
 func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
-	pair, err := getBody(r)
+	pair, err := getPairFromBody(r)
 	if err != nil {
 		sendResponse(w, response{
 			Data:       err.Error(),
