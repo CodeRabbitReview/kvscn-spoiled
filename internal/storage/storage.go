@@ -7,15 +7,21 @@ import (
 	"reflect"
 )
 
+// Value responds to simple value in storage
 type Value interface {
 	Type() reflect.Type
 	Entity() interface{}
 }
 
+// Keyer responds to key value in storage
+// Keyer has to have Value methods
 type Keyer interface {
 	Value
 }
 
+// Entitier responds to entity value in storage
+// Entitier has to have Value methods and JSON that gives
+// entity value in json format
 type Entitier interface {
 	Value
 	JSON() json.RawMessage
