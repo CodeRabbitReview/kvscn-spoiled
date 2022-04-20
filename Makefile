@@ -12,4 +12,4 @@ fmt: ## fmt project
 	go fmt ./...
 precommit: fmt lint test
 build: ## Build the binary file
-	CGO_ENABLED=1 go build -o ./bin/${BIN_NAME} -a .
+	go build -o ./bin/${BIN_NAME} -a .
