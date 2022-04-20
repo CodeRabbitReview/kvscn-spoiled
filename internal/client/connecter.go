@@ -1,128 +1,127 @@
 package client
 
 import (
-	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
+	"time"
 )
 
-const (
-	address     = "http://localhost:8080/api"
-	getAll      = "get all"
-	getByID     = "get by id"
-	addOrUpdate = "add or update new"
-	delete      = "delete"
-)
+const address = "http://localhost:8080/api"
 
-func SendRequestToServer() error {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("actions to do: \n1. %s\n2. %s\n3. %s\n4. %s\n",
-		getAll, getByID, addOrUpdate, delete)
-	for {
-		action, err := reader.ReadString('\n')
-		action = action[:len([]rune(action))-1]
-		if err != nil {
-			return err
-		}
-		switch action {
-		case getAll, "1":
-			if err := GetAll(); err != nil {
-				return err
-			}
-		case delete, "4":
-			param, err := reader.ReadString('\n')
-			if err != nil {
-				return err
-			}
-			if err := Delete(param); err != nil {
-				return err
-			}
-		case getByID, "2":
-			param, err := reader.ReadString('\n')
-			if err != nil {
-				return err
-			}
-			param = param[:len([]rune(param))-1]
-			if err := GetByID(param); err != nil {
-				return err
-			}
-		case addOrUpdate, "3":
-			param, err := reader.ReadString('~')
-			param = param[:len(param)-1]
-			if err != nil {
-				return err
-			}
-			if err := AddOrUpdate(param); err != nil {
-				return err
-			}
-		}
-	}
+//Response combines response status code and body
+type Response struct {
+	Body       []byte
+	StatusCode int
 }
 
-func GetAll() error {
+// GetAll sends request to the server by http.GET method
+// if some errors appear function returns an error
+// Method takes body and response and returns it in Response format
+func GetAll() (Response, error) {
 	resp, err := http.Get(address + "/")
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(resp.StatusCode, string(body))
-	return nil
+	return Response{
+		Body:       data,
+		StatusCode: resp.StatusCode,
+	}, nil
 }
 
-func Delete(param string) error {
+// Delete sends delete request to server by http.MethodDelete
+// Method takes param. It has to be a json key.
+// It sends request with this key in body
+// if some errors appear function returns an error
+// Method takes body and response and returns it in Response format
+func Delete(param string) (Response, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodDelete, address+"/"+param, nil)
+	req, err := http.NewRequest(http.MethodDelete, address+"/", bytes.NewBuffer([]byte(param)))
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(resp.StatusCode, string(body))
-	return nil
+	return Response{
+		Body:       data,
+		StatusCode: resp.StatusCode,
+	}, nil
 }
 
-func GetByID(param string) error {
+// GetByID sends get request to server by http.MethodGet
+// Method takes param. It has to be a json key.
+// It sends request with this key in body
+// if some errors appear function returns an error
+// Method takes body and response and returns it in Response format
+func GetByID(param string) (Response, error) {
 	client := &http.Client{}
-	fmt.Println(address + "/" + `` + param + ``)
-	req, err := http.NewRequest(http.MethodGet, address+"/"+``+param+``, nil)
+	req, err := http.NewRequest(http.MethodGet, address+"/id", bytes.NewBuffer([]byte(param)))
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(resp.StatusCode, string(body))
-	return nil
+	return Response{
+		Body:       data,
+		StatusCode: resp.StatusCode,
+	}, nil
 }
 
-func AddOrUpdate(param string) error {
+// AddOrUpdate sends create request to server by http.MethodPost
+// Method takes param. Format has to be like:{
+//    "key":"key",
+//    "entity": {
+//		"entity": "entity"
+//    }
+//}.
+// It sends request with this data in body
+// if some errors appear function returns an error
+// Method takes body and response and returns it in Response format
+// Response.Body is always nil
+func AddOrUpdate(param string) (Response, error) {
+	var t = http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConns = 20000
+	t.MaxConnsPerHost = 20000
+	defer t.CloseIdleConnections()
+	var client = &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: t,
+	}
 	buf := bytes.NewBuffer([]byte(param))
-	req, err := http.Post(address+"/", "application/json;charset=utf-8", buf)
+	req, err := http.NewRequest(http.MethodPost, address+"/", buf)
 	if err != nil {
-		return err
+		return Response{}, err
 	}
-	defer req.Body.Close()
-	fmt.Println(req.StatusCode)
-	return nil
+	resp, err := client.Do(req)
+	if err != nil {
+		return Response{}, err
+	}
+	defer func() {
+		resp.Body.Close()
+		req.Body.Close()
+	}()
+	return Response{
+		Body:       nil,
+		StatusCode: resp.StatusCode,
+	}, nil
 }
