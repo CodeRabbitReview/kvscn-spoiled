@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"github.com/mishaprokop4ik/storage/internal/models"
+	"encoding/json"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 )
 
@@ -74,29 +75,26 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url = strings.Replace(r.URL.String(), "/api/", "", 1)
+	url = strings.Replace(r.URL.String(), "/api", "", 1)
 
-	switch len([]rune(url)) == 0 {
-	case true:
-		if r.Method == http.MethodGet {
-			s.GetAll(w, r)
-			return
-		}
+	if url == "id" && r.Method == http.MethodGet {
+		s.Get(w, r)
+		return
+	}
 
-		if r.Method == http.MethodPost || r.Method == http.MethodPut {
-			s.Put(w, r)
-			return
-		}
-	case false:
-		if r.Method == http.MethodDelete {
-			s.Delete(w, r)
-			return
-		}
+	if url == "/" && r.Method == http.MethodGet {
+		s.GetAll(w, r)
+		return
+	}
 
-		if r.Method == http.MethodGet {
-			s.Get(w, r)
-			return
-		}
+	if url == "/" && r.Method == http.MethodPost || r.Method == http.MethodPut {
+		s.Put(w, r)
+		return
+	}
+
+	if url == "/" && r.Method == http.MethodDelete {
+		s.Delete(w, r)
+		return
 	}
 }
 
@@ -104,7 +102,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // response is an array of JSON objects
 // if no value in storage returns no data in storage error
 func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
-	allStorageData, err := s.storage.GetAll()
+	storageData, err := s.storage.GetAll()
 	if err != nil {
 		sendResponse(w, response{
 			Data:       err.Error(),
@@ -113,28 +111,35 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp = "["
-	var i = 0
-	for _, data := range allStorageData {
-		v := data.JSON()[:]
-		if i != len(allStorageData)-1 {
-			resp += string(v) + ", "
-		} else {
-			resp += string(v)
-		}
+	respData := make([]json.RawMessage, len(storageData))
+	var i int
+	for _, v := range storageData {
+		data := v.JSON()
+		respData[i] = data
 		i++
 	}
-	resp += "]"
+
+	sort.Slice(respData, func(i, j int) bool {
+		return string(respData[i]) < string(respData[j])
+	})
+
+	resp, err := json.Marshal(respData)
+	if err != nil {
+		sendResponse(w, response{
+			Data:       err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, s.log)
+	}
 
 	sendResponse(w, response{
-		Data:       []byte(resp),
+		Data:       resp,
 		StatusCode: http.StatusOK,
 	}, s.log)
 }
 
 // Get sends data to http.ResponseWriter in JSON format
 // response is an JSON object
-// Method takes id from URL
+// Method takes key from request body
 // id can be any data
 // if no value in storage returns no data in storage error
 // Get takes first param from URL from http.Request
@@ -198,15 +203,21 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete sends data to http.ResponseWriter in JSON format
-// Method takes id from URL
+// Method takes key from request body
 // id can be any data
 // it calls Storager.Delete
 // if some error appears http.StatusInternalServerError
 // if everything is OK returns http.StatusNoContent and nothing in body
 func (s Storage) Delete(w http.ResponseWriter, r *http.Request) {
-	url := strings.Replace(r.URL.String(), "/api/", "", 1)
-	param := models.NewKey(strings.Split(url, "/")[0])
-	err := s.storage.Delete(param)
+	pair, err := getPairFromBody(r)
+	if err != nil {
+		sendResponse(w, response{
+			Data:       err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		}, s.log)
+		return
+	}
+	err = s.storage.Delete(pair.Key)
 	if err != nil {
 		sendResponse(w, response{
 			Data:       err.Error(),

@@ -71,7 +71,7 @@ func TestServeHTTP(t *testing.T) {
 		},
 		{
 			name:           "delete value with key that is not in storage",
-			body:           nil,
+			body:           bytes.NewBuffer([]byte(`{"key": "misha_prokopchyk"}`)),
 			method:         http.MethodDelete,
 			url:            "/api/misha_prokopchyk",
 			expectedBody:   `{"response":"no such value by this key"}`,
@@ -79,9 +79,9 @@ func TestServeHTTP(t *testing.T) {
 		},
 		{
 			name:           "get value by id from storage",
-			body:           nil,
+			body:           bytes.NewBuffer([]byte(`{"key":"key_value"}`)),
 			method:         http.MethodGet,
-			url:            "/api/key_value",
+			url:            "/api/id",
 			expectedBody:   `{"response":{"key":"key value","entity":{"name":"misha","age":20}}}`,
 			expectedStatus: http.StatusOK,
 		},
@@ -117,41 +117,26 @@ func TestServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:   "get all data from non empty storage",
-			body:   nil,
-			method: http.MethodGet,
-			url:    "/api/",
-			expectedBody: `[{
-        					"key": "key value",
-        					"entity": {
-        						"name": "misha",
-        						"age": 20
-        					}
-        			}, {
-        					"key": {
-        						"country": "Ukraine",
-        						"city": "Kharkov"
-        					},
-        					"entity": {
-        						"name": "misha",
-        						"age": 20
-        					}
-        			}]`,
+			name:           "get all data from non empty storage",
+			body:           nil,
+			method:         http.MethodGet,
+			url:            "/api/",
+			expectedBody:   `[{"key":"key value","entity":{"name":"misha","age":20}},{"key":{"country":"Ukraine","city":"Kharkov"},"entity":{"name":"misha","age":20}}]`,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "get data by key that does not exist",
-			body:           nil,
+			body:           bytes.NewBuffer([]byte(`{"key":"123123"}`)),
 			method:         http.MethodGet,
-			url:            "/api/123123",
+			url:            "/api/id",
 			expectedBody:   `{"response":"no such value by this key"}`,
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "delete data",
-			body:           nil,
+			body:           bytes.NewBuffer([]byte(`{"key": "key_value"}`)),
 			method:         http.MethodDelete,
-			url:            "/api/key_value",
+			url:            "/api/",
 			expectedBody:   "",
 			expectedStatus: http.StatusNoContent,
 		},
@@ -208,8 +193,14 @@ func TestGetAllWithOneObjectInStorage(t *testing.T) {
 	s := storage.NewStorage()
 
 	if err := s.Put(storage.Pair{
-		Key:    models.NewKey("misha"),
-		Entity: models.NewEntity(20, []byte(`"misha": 20`)),
+		Key: models.NewKey("misha"),
+		Entity: models.NewEntity(20, []byte(`{
+    "key":"misha",
+    "entity": {
+		"misha": 20
+    }
+}
+`)),
 	}); err != nil {
 		t.Error(err)
 	}
@@ -222,7 +213,7 @@ func TestGetAllWithOneObjectInStorage(t *testing.T) {
 	}{
 		{
 			name:               "with one object in storageServer",
-			expectedBody:       `["misha": 20]`,
+			expectedBody:       `[{"key":"misha","entity":{"misha":20}}]`,
 			expectedStatusCode: http.StatusOK,
 		},
 	}
@@ -247,14 +238,22 @@ func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 	s := storage.NewStorage()
 
 	if err := s.Put(storage.Pair{
-		Key:    models.NewKey("misha"),
-		Entity: models.NewEntity(20, []byte(`"misha": 20`)),
+		Key: models.NewKey("misha"),
+		Entity: models.NewEntity(20, []byte(`{
+    "key":"misha",
+    "entity": {
+		"misha": 20
+    }}`)),
 	}); err != nil {
 		t.Error(err)
 	}
 	if err := s.Put(storage.Pair{
-		Key:    models.NewKey("dasha"),
-		Entity: models.NewEntity(20, []byte(`"dasha": 19`)),
+		Key: models.NewKey("dasha"),
+		Entity: models.NewEntity(20, []byte(`{
+    "key":"dasha",
+    "entity": {
+		"dasha": 20
+    }}`)),
 	}); err != nil {
 		t.Error(err)
 	}
@@ -267,7 +266,7 @@ func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 	}{
 		{
 			name:               "with more than one object in storageServer",
-			expectedBody:       `["misha": 20, "dasha": 19]`,
+			expectedBody:       `[{"key":"dasha","entity":{"dasha":20}},{"key":"misha","entity":{"misha":20}}]`,
 			expectedStatusCode: http.StatusOK,
 		},
 	}
@@ -411,20 +410,21 @@ func TestGet(t *testing.T) {
 		{
 			name:               "get by id",
 			expectedStatusCode: http.StatusOK,
-			key:                "developer",
+			key:                `{"key": "developer"}`,
 			expectedBody:       `{"response":{"key":"developer","entity":{"name":"misha","lvl":"trainee"}}}`,
 		},
 		{
 			name:               "get by id incorrect id",
 			expectedStatusCode: http.StatusNotFound,
-			key:                "key_value",
+			key:                `{"key": "key_value"}`,
 			expectedBody:       `{"response":"no such value by this key"}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/%s", tt.key), nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/id",
+				bytes.NewBuffer([]byte(tt.key)))
 			w := httptest.NewRecorder()
 			handler := http.HandlerFunc(storageServer.ServeHTTP)
 			handler.ServeHTTP(w, req)
@@ -466,28 +466,29 @@ func TestDelete(t *testing.T) {
 		expectedBody       string
 	}{
 		{
-			name:               "delete by incorrect key",
+			name:               "delete by that does not exist",
 			expectedStatusCode: http.StatusNotFound,
-			key:                "trainee",
+			key:                `{"key": "misha"}`,
 			expectedBody:       `{"response":"no such value by this key"}`,
 		},
 		{
 			name:               "simple delete",
 			expectedStatusCode: http.StatusNoContent,
-			key:                "developer",
+			key:                `{"key": "developer"}`,
 			expectedBody:       ``,
 		},
 		{
 			name:               "from empty storage",
 			expectedStatusCode: http.StatusNotFound,
-			key:                "key_value",
+			key:                `{"key": "user"}`,
 			expectedBody:       `{"response":"no data in storage"}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/%s", tt.key), nil)
+			req := httptest.NewRequest(http.MethodDelete, "/api/",
+				bytes.NewBuffer([]byte(tt.key)))
 			w := httptest.NewRecorder()
 			handler := http.HandlerFunc(storageServer.ServeHTTP)
 			handler.ServeHTTP(w, req)
