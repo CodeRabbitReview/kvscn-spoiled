@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -117,7 +118,7 @@ func TestStorage_Put(t *testing.T) {
 				t.Fatalf("expected error: %v, got %v", tt.expectedError, gotErr)
 			}
 
-			if !reflect.DeepEqual(tt.gotStorage, tt.expectedStorage) {
+			if !reflect.DeepEqual(tt.gotStorage.pairs, tt.expectedStorage.pairs) {
 				t.Fatalf("expected storage: %v, got %v", tt.expectedStorage, tt.gotStorage)
 			}
 		})
@@ -141,6 +142,7 @@ func TestStorage_Get(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("string data"): models.NewEntity("data", nil),
 				},
+				mu: &sync.Mutex{},
 			},
 		},
 		{
@@ -152,6 +154,7 @@ func TestStorage_Get(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("number"): models.NewEntity(5, nil),
 				},
+				mu: &sync.Mutex{},
 			},
 		},
 		{
@@ -163,6 +166,7 @@ func TestStorage_Get(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}, nil),
 				},
+				mu: &sync.Mutex{},
 			},
 		},
 		{
@@ -186,6 +190,7 @@ func TestStorage_Get(t *testing.T) {
 						20,
 					}, nil),
 				},
+				mu: &sync.Mutex{},
 			},
 		},
 		{
@@ -195,6 +200,7 @@ func TestStorage_Get(t *testing.T) {
 			fmt.Errorf("no data in storage"),
 			Storage{
 				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.Mutex{},
 			},
 		},
 	}
@@ -285,6 +291,7 @@ func TestStorage_Delete(t *testing.T) {
 					models.NewKey("key"):     models.NewEntity("value", nil),
 					models.NewKey("new key"): models.NewEntity("value", nil),
 				},
+				mu: &sync.Mutex{},
 			},
 			models.ErrNoSuchKey,
 		},
@@ -295,6 +302,7 @@ func TestStorage_Delete(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("key"): models.NewEntity("value", nil),
 				},
+				mu: &sync.Mutex{},
 			},
 			models.ErrNoSuchKey,
 		},
@@ -303,6 +311,7 @@ func TestStorage_Delete(t *testing.T) {
 			models.NewKey(""),
 			Storage{
 				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.Mutex{},
 			},
 			fmt.Errorf("no data in storage"),
 		},
