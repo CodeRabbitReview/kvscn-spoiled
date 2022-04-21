@@ -14,7 +14,8 @@ type Response struct {
 	StatusCode int
 }
 
-//API combines url and http.Client
+//API combines server url
+//and http.Client
 type API struct {
 	client *http.Client
 	url    string

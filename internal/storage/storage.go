@@ -50,13 +50,13 @@ func (p Pair) nilEntity() bool {
 
 type Storage struct {
 	pairs map[Keyer]Entitier
-	mu    *sync.Mutex
+	mu    *sync.RWMutex
 }
 
 func NewStorage() *Storage {
 	return &Storage{
 		pairs: make(map[Keyer]Entitier),
-		mu:    &sync.Mutex{},
+		mu:    &sync.RWMutex{},
 	}
 }
 
@@ -84,10 +84,11 @@ func (s *Storage) Get(key Keyer) (Entitier, error) {
 	if len(s.pairs) == 0 {
 		return nil, fmt.Errorf("no data in storage")
 	}
+	s.mu.RLock()
 	if v, ok := s.pairs[key]; ok {
 		return v, nil
 	}
-
+	s.mu.RUnlock()
 	return nil, models.ErrNoSuchKey
 }
 

@@ -142,7 +142,7 @@ func TestStorage_Get(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("string data"): models.NewEntity("data", nil),
 				},
-				mu: &sync.Mutex{},
+				mu: &sync.RWMutex{},
 			},
 		},
 		{
@@ -154,7 +154,7 @@ func TestStorage_Get(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("number"): models.NewEntity(5, nil),
 				},
-				mu: &sync.Mutex{},
+				mu: &sync.RWMutex{},
 			},
 		},
 		{
@@ -166,7 +166,7 @@ func TestStorage_Get(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}, nil),
 				},
-				mu: &sync.Mutex{},
+				mu: &sync.RWMutex{},
 			},
 		},
 		{
@@ -190,7 +190,7 @@ func TestStorage_Get(t *testing.T) {
 						20,
 					}, nil),
 				},
-				mu: &sync.Mutex{},
+				mu: &sync.RWMutex{},
 			},
 		},
 		{
@@ -200,7 +200,7 @@ func TestStorage_Get(t *testing.T) {
 			fmt.Errorf("no data in storage"),
 			Storage{
 				pairs: make(map[Keyer]Entitier),
-				mu:    &sync.Mutex{},
+				mu:    &sync.RWMutex{},
 			},
 		},
 	}
@@ -291,7 +291,7 @@ func TestStorage_Delete(t *testing.T) {
 					models.NewKey("key"):     models.NewEntity("value", nil),
 					models.NewKey("new key"): models.NewEntity("value", nil),
 				},
-				mu: &sync.Mutex{},
+				mu: &sync.RWMutex{},
 			},
 			models.ErrNoSuchKey,
 		},
@@ -302,7 +302,7 @@ func TestStorage_Delete(t *testing.T) {
 				pairs: map[Keyer]Entitier{
 					models.NewKey("key"): models.NewEntity("value", nil),
 				},
-				mu: &sync.Mutex{},
+				mu: &sync.RWMutex{},
 			},
 			models.ErrNoSuchKey,
 		},
@@ -311,7 +311,7 @@ func TestStorage_Delete(t *testing.T) {
 			models.NewKey(""),
 			Storage{
 				pairs: make(map[Keyer]Entitier),
-				mu:    &sync.Mutex{},
+				mu:    &sync.RWMutex{},
 			},
 			fmt.Errorf("no data in storage"),
 		},
