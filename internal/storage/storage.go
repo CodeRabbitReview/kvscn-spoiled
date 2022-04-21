@@ -81,8 +81,6 @@ func (s *Storage) Put(p Pair) error {
 // If no such data by key returns models.ErrNilInput error
 // If there is not any data in storage returns no data in storage error
 func (s *Storage) Get(key Keyer) (Entitier, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if len(s.pairs) == 0 {
 		return nil, fmt.Errorf("no data in storage")
 	}

@@ -8,7 +8,6 @@ import (
 	"os"
 )
 
-//TODO attach benchmarking results to the PR with number of requests equal to 10 and 50 for both sequential and concurrent types of tests.
 func main() {
 	log := log.New(os.Stdout, "storage", log.LstdFlags)
 	storage := storage.NewStorage()

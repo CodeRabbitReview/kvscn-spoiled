@@ -8,22 +8,45 @@ import (
 	"time"
 )
 
-const address = "http://localhost:8080/api"
-
 //Response combines response status code and body
 type Response struct {
 	Body       []byte
 	StatusCode int
 }
 
+//API combines url and http.Client
+type API struct {
+	client *http.Client
+	url    string
+}
+
+// NewAPI creates new instance or API by input url and
+// http.Client, where http.Transport.MaxIdleConns and
+// http.Transport.MaxConnsPerHost changed to 20000
+// and http.Client.Timeout changed to 10 seconds
+func NewAPI(url string) *API {
+	var t = http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConns = 20000
+	t.MaxConnsPerHost = 20000
+	return &API{
+		client: &http.Client{Transport: t, Timeout: 10 * time.Second},
+		url:    url,
+	}
+}
+
 // GetAll sends request to the server by http.GET method
 // if some errors appear function returns an error
 // Method takes body and response and returns it in Response format
-func GetAll() (Response, error) {
-	resp, err := http.Get(address + "/")
+func (c *API) GetAll() (Response, error) {
+	req, err := http.NewRequest(http.MethodGet, c.url+"/api/", nil)
 	if err != nil {
 		return Response{}, err
 	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return Response{}, err
+	}
+
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -40,13 +63,12 @@ func GetAll() (Response, error) {
 // It sends request with this key in body
 // if some errors appear function returns an error
 // Method takes body and response and returns it in Response format
-func Delete(param string) (Response, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodDelete, address+"/", bytes.NewBuffer([]byte(param)))
+func (c *API) Delete(param string) (Response, error) {
+	req, err := http.NewRequest(http.MethodDelete, c.url+"/api/", bytes.NewBuffer([]byte(param)))
 	if err != nil {
 		return Response{}, err
 	}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return Response{}, err
 	}
@@ -66,13 +88,12 @@ func Delete(param string) (Response, error) {
 // It sends request with this key in body
 // if some errors appear function returns an error
 // Method takes body and response and returns it in Response format
-func GetByID(param string) (Response, error) {
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, address+"/id", bytes.NewBuffer([]byte(param)))
+func (c *API) GetByID(param string) (Response, error) {
+	req, err := http.NewRequest(http.MethodGet, c.url+"/api/id", bytes.NewBuffer([]byte(param)))
 	if err != nil {
 		return Response{}, err
 	}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return Response{}, err
 	}
@@ -98,21 +119,13 @@ func GetByID(param string) (Response, error) {
 // if some errors appear function returns an error
 // Method takes body and response and returns it in Response format
 // Response.Body is always nil
-func AddOrUpdate(param string) (Response, error) {
-	var t = http.DefaultTransport.(*http.Transport).Clone()
-	t.MaxIdleConns = 20000
-	t.MaxConnsPerHost = 20000
-	defer t.CloseIdleConnections()
-	var client = &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: t,
-	}
+func (c *API) AddOrUpdate(param string) (Response, error) {
 	buf := bytes.NewBuffer([]byte(param))
-	req, err := http.NewRequest(http.MethodPost, address+"/", buf)
+	req, err := http.NewRequest(http.MethodPost, c.url+"/api/", buf)
 	if err != nil {
 		return Response{}, err
 	}
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return Response{}, err
 	}
