@@ -2,11 +2,27 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
+	"os"
 	"reflect"
+	"regexp"
 	"sync"
 )
+
+type actions []string
+
+var actionList = actions{"put", "delete"}
+
+func (a *actions) in(action string) bool {
+	for i := 0; i < len(*a); i++ {
+		if (*a)[i] == action {
+			return true
+		}
+	}
+	return false
+}
 
 // Value responds to simple value in storage
 type Value interface {
@@ -49,15 +65,41 @@ func (p Pair) nilEntity() bool {
 }
 
 type Storage struct {
-	pairs map[Keyer]Entitier
-	mu    *sync.RWMutex
+	pairs       map[Keyer]Entitier
+	mu          *sync.RWMutex
+	fileRecover *os.File
 }
 
-func NewStorage() *Storage {
-	return &Storage{
-		pairs: make(map[Keyer]Entitier),
-		mu:    &sync.RWMutex{},
+//NewStorage ..
+func NewStorage(fileName string) (*Storage, error) {
+	if fileName == "" {
+		return &Storage{
+			pairs:       make(map[Keyer]Entitier),
+			mu:          &sync.RWMutex{},
+			fileRecover: nil,
+		}, nil
 	}
+
+	var err error
+	var f *os.File
+	_, err = os.Stat(fileName)
+	if errors.Is(err, os.ErrNotExist) {
+		f, err = os.Create(fileName)
+	} else if err == nil {
+		f, err = os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	} else {
+		return nil, err
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &Storage{
+		pairs:       make(map[Keyer]Entitier),
+		mu:          &sync.RWMutex{},
+		fileRecover: f,
+	}, nil
 }
 
 //Put adds new value to storage or update old value by key
@@ -70,6 +112,12 @@ func (s *Storage) Put(p Pair) error {
 	if p.emptyKey() {
 		return models.ErrEmptyKey
 	}
+
+	err := s.RecoverData(actionList[0], string(p.Entity.JSON()))
+	if err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pairs[p.Key] = p.Entity
@@ -85,10 +133,10 @@ func (s *Storage) Get(key Keyer) (Entitier, error) {
 		return nil, fmt.Errorf("no data in storage")
 	}
 	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if v, ok := s.pairs[key]; ok {
 		return v, nil
 	}
-	s.mu.RUnlock()
 	return nil, models.ErrNoSuchKey
 }
 
@@ -101,9 +149,15 @@ func (s *Storage) Delete(key Keyer) error {
 	if len(s.pairs) == 0 {
 		return fmt.Errorf("no data in storage")
 	}
-	if _, ok := s.pairs[key]; !ok {
+	if value, ok := s.pairs[key]; ok {
+		err := s.RecoverData(actionList[1], string(value.JSON()))
+		if err != nil {
+			return err
+		}
+	} else {
 		return models.ErrNoSuchKey
 	}
+
 	delete(s.pairs, key)
 	return nil
 }
@@ -115,4 +169,24 @@ func (s *Storage) GetAll() (map[Keyer]Entitier, error) {
 		return nil, fmt.Errorf("no data in storage")
 	}
 	return s.pairs, nil
+}
+
+func (s *Storage) RecoverData(action, data string) error {
+	if s.fileRecover == nil {
+		return nil
+	}
+	removeAllSpaces, err := regexp.Compile(`\r|\t|\n|\t| `)
+	if err != nil {
+		return err
+	}
+	if !actionList.in(action) {
+		return fmt.Errorf("incorrect action type: %s; want one of this: %v",
+			action, actionList)
+	}
+	data = removeAllSpaces.ReplaceAllString(data, "")
+	_, err = s.fileRecover.WriteString(fmt.Sprintf("%s\t%s\n", action, data))
+	if err != nil {
+		return err
+	}
+	return nil
 }

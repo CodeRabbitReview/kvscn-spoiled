@@ -10,9 +10,10 @@ import (
 
 func main() {
 	log := log.New(os.Stdout, "storage", log.LstdFlags)
-	storage := storage.NewStorage()
-	server := httpserver.NewHTTPServer(log, handlers.NewStorage(log, storage))
-	if err := server.Run(); err != nil {
+	storage, err := storage.NewStorage("file.txt")
+	if err != nil {
 		log.Fatal(err)
 	}
+	server := httpserver.NewHTTPServer(log, handlers.NewStorage(log, storage), "file.txt")
+	server.Run()
 }

@@ -4,6 +4,8 @@ package storage
 import (
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -23,8 +25,16 @@ func TestStorage_Put(t *testing.T) {
 				Key:    models.NewKey(nil),
 				Entity: models.NewEntity(nil, nil),
 			},
-			*NewStorage(),
-			*NewStorage(),
+			Storage{
+				pairs:       make(map[Keyer]Entitier),
+				mu:          &sync.RWMutex{},
+				fileRecover: nil,
+			},
+			Storage{
+				pairs:       make(map[Keyer]Entitier),
+				mu:          &sync.RWMutex{},
+				fileRecover: nil,
+			},
 			models.ErrNilInput,
 		},
 		{
@@ -52,7 +62,11 @@ func TestStorage_Put(t *testing.T) {
 					models.NewKey("simple string"): models.NewEntity("simple", nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs:       make(map[Keyer]Entitier),
+				mu:          &sync.RWMutex{},
+				fileRecover: nil,
+			},
 			nil,
 		},
 		{
@@ -66,7 +80,11 @@ func TestStorage_Put(t *testing.T) {
 					models.NewKey("number"): models.NewEntity(5, nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs:       make(map[Keyer]Entitier),
+				mu:          &sync.RWMutex{},
+				fileRecover: nil,
+			},
 			nil,
 		},
 		{
@@ -80,7 +98,11 @@ func TestStorage_Put(t *testing.T) {
 					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}, nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs:       make(map[Keyer]Entitier),
+				mu:          &sync.RWMutex{},
+				fileRecover: nil,
+			},
 			nil,
 		},
 		{
@@ -106,7 +128,11 @@ func TestStorage_Put(t *testing.T) {
 					}, nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs:       make(map[Keyer]Entitier),
+				mu:          &sync.RWMutex{},
+				fileRecover: nil,
+			},
 			nil,
 		},
 	}
@@ -324,6 +350,85 @@ func TestStorage_Delete(t *testing.T) {
 			_, err := tt.storage.Get(tt.key)
 			if !reflect.DeepEqual(err, tt.expectedError) {
 				t.Fatalf("expected error: %v, got %v", tt.expectedError, err)
+			}
+		})
+	}
+}
+
+func TestStorage_RecoverData(t *testing.T) {
+	file, err := ioutil.TempFile("", "storage_test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(file.Name())
+	tests := []struct {
+		name          string
+		action        string
+		data          string
+		storage       Storage
+		expectedError error
+	}{
+		{
+			name:   "incorrect action",
+			action: "get",
+			data:   `{"key": {"1": 20},"entity": {"misha": 20}}`,
+			storage: Storage{
+				pairs:       map[Keyer]Entitier{},
+				mu:          &sync.RWMutex{},
+				fileRecover: file,
+			},
+			expectedError: fmt.Errorf(`incorrect action type: get; want one of this: [put delete]`),
+		},
+		{
+			name:   "correct insert",
+			action: "put",
+			data:   `{"key": {"1": 20},"entity": {"misha": 20}}`,
+			storage: Storage{
+				pairs:       map[Keyer]Entitier{},
+				mu:          &sync.RWMutex{},
+				fileRecover: file,
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			err := tt.storage.RecoverData(tt.action, tt.data)
+			if !reflect.DeepEqual(err, tt.expectedError) {
+				t.Fatalf("expected error: %v, got %v", tt.expectedError, err)
+			}
+		})
+	}
+}
+
+func TestNewStorage(t *testing.T) {
+	file, err := ioutil.TempFile("", "storage_test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(file.Name())
+	tests := []struct {
+		name     string
+		fileName string
+	}{
+		{
+			name:     "without file",
+			fileName: "",
+		},
+		{
+			name:     "with file",
+			fileName: file.Name(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			_, err := NewStorage(tt.fileName)
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

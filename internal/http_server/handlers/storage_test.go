@@ -147,7 +147,11 @@ func TestServeHTTP(t *testing.T) {
 			expectedStatus: http.StatusNoContent,
 		},
 	}
-	storage := NewStorage(nil, storage.NewStorage())
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
+	storage := NewStorage(nil, s)
 
 	for _, tt := range tests {
 		req := httptest.NewRequest(tt.method, tt.url, tt.body)
@@ -166,7 +170,11 @@ func TestServeHTTP(t *testing.T) {
 }
 
 func TestGetAllInEmptyStorage(t *testing.T) {
-	storage := NewStorage(nil, storage.NewStorage())
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
+	storage := NewStorage(nil, s)
 	tests := []struct {
 		name               string
 		expectedBody       string
@@ -196,7 +204,10 @@ func TestGetAllInEmptyStorage(t *testing.T) {
 }
 
 func TestGetAllWithOneObjectInStorage(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := s.Put(storage.Pair{
 		Key: models.NewKey("misha"),
@@ -241,7 +252,10 @@ func TestGetAllWithOneObjectInStorage(t *testing.T) {
 }
 
 func TestGetAllWithManyObjectsInStorage(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 
 	if err := s.Put(storage.Pair{
 		Key: models.NewKey("misha"),
@@ -294,7 +308,10 @@ func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	storageServer := NewStorage(nil, s)
 	tests := []struct {
 		name               string
@@ -354,7 +371,10 @@ func TestPut(t *testing.T) {
 }
 
 func TestGetFromEmptyStorage(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	storageServer := NewStorage(nil, s)
 	tests := []struct {
 		name               string
@@ -390,7 +410,10 @@ func TestGetFromEmptyStorage(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	s.Put(storage.Pair{
 		Key: models.NewKey("developer"),
 		Entity: models.NewEntity(struct {
@@ -448,7 +471,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	s.Put(storage.Pair{
 		Key: models.NewKey("developer"),
 		Entity: models.NewEntity(struct {
@@ -512,7 +538,10 @@ func TestDelete(t *testing.T) {
 }
 
 func TestOutHTMLWithoutData(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	storageServer := NewStorage(nil, s)
 	changeIndexPath("static/index.gohtml")
 	tests := []struct {
@@ -582,7 +611,10 @@ func TestOutHTMLWithoutData(t *testing.T) {
 }
 
 func TestOutHTMLWithOneData(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	s.Put(storage.Pair{
 		Key: models.NewKey("person"),
 		Entity: models.NewEntity(map[string]interface{}{
@@ -679,7 +711,10 @@ func TestOutHTMLWithOneData(t *testing.T) {
 }
 
 func TestOutHTMLWithManyData(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	s.Put(storage.Pair{
 		Key: models.NewKey("students"),
 		Entity: models.NewEntity(map[string][]map[string]string{
@@ -809,7 +844,10 @@ func TestOutHTMLWithManyData(t *testing.T) {
 }
 
 func TestOutHTMLEmptyHTMLPath(t *testing.T) {
-	s := storage.NewStorage()
+	s, err := storage.NewStorage("")
+	if err != nil {
+		t.Error(err)
+	}
 	storageServer := NewStorage(log.New(os.Stdout, "storage", log.LstdFlags), s)
 	changeIndexPath("")
 	tests := []struct {
