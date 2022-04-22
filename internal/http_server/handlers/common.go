@@ -63,8 +63,12 @@ func getPairFromBody(r *http.Request) (storage.Pair, error) {
 	if err != nil {
 		return storage.Pair{}, err
 	}
+	e, err := models.NewClearEntity(p.Entity, bodyBytes)
+	if err != nil {
+		return storage.Pair{}, err
+	}
 	return storage.Pair{
 		Key:    models.NewKey(p.Key),
-		Entity: models.NewEntity(p.Entity, bodyBytes),
+		Entity: e,
 	}, nil
 }

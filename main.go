@@ -11,10 +11,8 @@ import (
 
 func main() {
 	log := log.New(os.Stdout, "storage", log.LstdFlags)
-	r, err := recoverer.NewRecover("file.txt", log)
-	if err != nil {
-		log.Fatal(err)
-	}
+	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile, log)
+
 	storage := storage.NewStorage(r)
 	server := httpserver.NewHTTPServer(log, handlers.NewStorage(log, storage))
 	server.Run(r)

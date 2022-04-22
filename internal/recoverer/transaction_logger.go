@@ -8,20 +8,25 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
+	"sync"
 )
 
+// DefaultSaveFile is name of file where recovered data will be sent
+const DefaultSaveFile = "recovered"
+
+// Recovered combines http.Method and data.
+// data should be in json format string
 type Recovered struct {
 	method string
 	data   string
 }
 
-type actions []string
+type Actions []string
 
-var defaultActions = actions{"put", "delete"}
+var DefaultActions = Actions{"p", "d"}
 
-func (a *actions) in(action string) bool {
+func (a *Actions) in(action string) bool {
 	for i := 0; i < len(*a); i++ {
 		if (*a)[i] == action {
 			return true
@@ -30,70 +35,67 @@ func (a *actions) in(action string) bool {
 	return false
 }
 
-type Recover struct {
-	file   *os.File
-	logger *log.Logger
-	c      chan Recovered
+// TransactionLogger contains options to recover data
+type TransactionLogger struct {
+	fileName string
+	logger   *log.Logger
+	c        chan Recovered
 }
 
-func NewRecover(fileName string, l *log.Logger) (*Recover, error) {
+// NewTransactionLogger creates new instance of TransactionLogger
+// if fileName is empty string will use DefaultSaveFile
+// if there is not a file with input fileName
+// NewTransactionLogger will create new file by this name
+func NewTransactionLogger(fileName string, l *log.Logger) *TransactionLogger {
 	if fileName == "" {
-		return &Recover{
-			file:   nil,
-			logger: l,
-			c:      make(chan Recovered),
-		}, nil
+		fileName = DefaultSaveFile
 	}
 
-	var err error
-	var f *os.File
-	_, err = os.Stat(fileName)
+	_, err := os.Stat(fileName)
 	if errors.Is(err, os.ErrNotExist) {
-		f, err = os.Create(fileName)
-	} else if err == nil {
-		f, err = os.OpenFile(fileName, os.O_RDWR, os.ModeAppend)
-	} else {
-		return nil, err
+		_, err := os.Create(fileName)
+		if err != nil {
+			l.Fatal(err)
+		}
 	}
 
-	if err != nil {
-		return nil, err
+	return &TransactionLogger{
+		fileName: fileName,
+		logger:   l,
+		c:        make(chan Recovered),
 	}
-
-	return &Recover{
-		file:   f,
-		logger: l,
-		c:      make(chan Recovered),
-	}, nil
 }
 
-func (r *Recover) RecoverData(action, data string) error {
-	if r.file == nil {
-		return nil
+// RecoverData recovers data into file
+// if action does not exist in Actions input
+// will send error message.
+// In correct way RecoverData saves data in file by format:
+// action\tdata\n
+func (r *TransactionLogger) RecoverData(action, data string, actions Actions) error {
+	if !actions.in(action) {
+		return fmt.Errorf(`incorrect action type: %s; want one of this: %v`, action, DefaultActions)
 	}
-	removeAllSpaces, err := regexp.Compile(`\r|\t|\n|\t| `)
+	f, err := os.OpenFile(r.fileName,
+		os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+
 	if err != nil {
-		return err
+		r.logger.Fatal(err)
 	}
-	if !defaultActions.in(action) {
-		return fmt.Errorf("incorrect action type: %s; want one of this: %v",
-			action, defaultActions)
-	}
-	data = removeAllSpaces.ReplaceAllString(data, "")
-	_, err = r.file.WriteString(fmt.Sprintf("%s\t%s\n", action, data))
+	defer f.Close()
+	_, err = f.WriteString(fmt.Sprintf("%s\t%s\n", action, data))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *Recover) takeRecovered() {
-	_, err := os.Stat(r.file.Name())
+func (r *TransactionLogger) takeRecovered() {
+	_, err := os.Stat(r.fileName)
 	if err != nil {
 		r.logger.Fatal(err)
 	}
-	f, err := os.OpenFile(r.file.Name(),
-		os.O_APPEND, 0644)
+	f, err := os.OpenFile(r.fileName,
+		os.O_RDONLY, 0644)
 	if err != nil {
 		r.logger.Fatal(err)
 	}
@@ -105,52 +107,63 @@ func (r *Recover) takeRecovered() {
 			r.logger.Fatalf("scan file error: %v", err)
 		}
 		recoverData := strings.Split(sc.Text(), "\t")
-		switch recoverData[0] {
-		case "put":
-			r.c <- Recovered{
-				method: http.MethodPut,
-				data:   recoverData[1],
-			}
-		case "delete":
-			r.c <- Recovered{
-				method: http.MethodDelete,
-				data:   recoverData[1],
-			}
+		r.c <- Recovered{
+			method: recoverData[0],
+			data:   recoverData[1],
 		}
 	}
 	err = sc.Err()
 	if err != nil {
 		r.logger.Fatalf("scan file error: %v", err)
 	}
-	err = os.Truncate(r.file.Name(), 0)
+	err = os.Truncate(r.fileName, 0)
 	if err != nil {
 		r.logger.Fatal(err)
 	}
 	r.c <- Recovered{}
 }
 
-func (r *Recover) SendRecovered(addr string) {
+// SendRecovered takes recovered data and send it to client
+// first requests will put after it delete
+func (r *TransactionLogger) SendRecovered(port string) {
 	go r.takeRecovered()
-	client := client.NewAPI(fmt.Sprintf("http://localhost%s", addr))
+	client := client.NewAPI(fmt.Sprintf("http://localhost%s", port))
 	defer close(r.c)
+	wg := &sync.WaitGroup{}
+	var toDelete []string
 	for {
 		recovered := <-r.c
 		if (Recovered{}) == recovered {
 			break
 		}
-		go func(recovered Recovered) {
-			switch recovered.method {
-			case http.MethodPut:
-				_, err := client.AddOrUpdate(recovered.data)
+		switch recovered.method {
+		case "p":
+			wg.Add(1)
+			go func(data string) {
+				defer wg.Done()
+				resp, err := client.AddOrUpdate(data)
 				if err != nil {
 					r.logger.Fatal(err)
 				}
-			case http.MethodDelete:
-				_, err := client.Delete(recovered.data)
-				if err != nil {
-					r.logger.Fatal(err)
+				if resp.StatusCode != http.StatusCreated {
+					r.logger.Println(resp.StatusCode, string(resp.Body))
 				}
+			}(recovered.data)
+		case "d":
+			toDelete = append(toDelete, recovered.data)
+		}
+	}
+
+	wg.Wait()
+	for i := 0; i < len(toDelete); i++ {
+		go func(data string) {
+			resp, err := client.Delete(data)
+			if err != nil {
+				r.logger.Fatal(err)
 			}
-		}(recovered)
+			if resp.StatusCode != http.StatusNoContent {
+				r.logger.Println(resp.StatusCode, string(resp.Body))
+			}
+		}(toDelete[i])
 	}
 }

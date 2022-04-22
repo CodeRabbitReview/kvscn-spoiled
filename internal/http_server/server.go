@@ -17,9 +17,8 @@ import (
 // Handler is an interface http.Handler
 // it responds to an HTTP request
 type HTTPServer struct {
-	server          *http.Server
-	logger          *log.Logger
-	fileRecoverName string
+	server *http.Server
+	logger *log.Logger
 }
 
 // NewHTTPServer is a constructor of HTTPServer

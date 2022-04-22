@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
+	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"reflect"
 	"sync"
 )
@@ -55,10 +56,9 @@ type Storage struct {
 }
 
 type resumer interface {
-	RecoverData(action, data string) error
+	RecoverData(action, data string, actions recoverer.Actions) error
 }
 
-//NewStorage ..
 func NewStorage(r resumer) *Storage {
 	return &Storage{
 		pairs:   make(map[Keyer]Entitier),
@@ -78,15 +78,19 @@ func (s *Storage) Put(p Pair) error {
 		return models.ErrEmptyKey
 	}
 
-	err := s.resumer.RecoverData("put", string(p.Entity.JSON()))
-	if err != nil {
-		return err
+	if v, ok := s.pairs[p.Key]; !ok ||
+		v != nil && string(v.JSON()) != string(p.Entity.JSON()) {
+		if s.resumer != nil {
+			err := s.resumer.RecoverData("p", string(p.Entity.JSON()), recoverer.DefaultActions)
+			if err != nil {
+				return err
+			}
+		}
+
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.pairs[p.Key] = p.Entity
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.pairs[p.Key] = p.Entity
-
 	return nil
 }
 
@@ -114,11 +118,17 @@ func (s *Storage) Delete(key Keyer) error {
 	if len(s.pairs) == 0 {
 		return fmt.Errorf("no data in storage")
 	}
-	if value, ok := s.pairs[key]; ok {
-
-		err := s.resumer.RecoverData("delete", string(value.JSON()))
+	if _, ok := s.pairs[key]; ok {
+		b, err := json.Marshal(key.Entity())
 		if err != nil {
 			return err
+		}
+		if s.resumer != nil {
+			err = s.resumer.RecoverData("d",
+				fmt.Sprintf(`{"key": %s}`, string(b)), recoverer.DefaultActions)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		return models.ErrNoSuchKey
