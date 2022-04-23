@@ -37,7 +37,9 @@ type resumer interface {
 	SendRecovered(addr string)
 }
 
-//Run ..
+// Run runs http server and take recovered data and send it
+// to server in parallel.
+// Run catch system signal and display it
 func (s *HTTPServer) Run(r resumer) {
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil {
