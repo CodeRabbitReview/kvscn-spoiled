@@ -115,6 +115,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // response is an array of JSON objects
 // if no value in storage returns no data in storage error
 func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	storageData, err := s.storage.GetAll()
 	if err != nil {
@@ -158,6 +159,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 // if no value in storage returns no data in storage error
 // Get takes first param from URL from http.Request
 func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
 	if err != nil {
@@ -193,6 +195,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 // Spaces before and after will be removed
 // spaces between words will be changed to _ symbol
 func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
 	if err != nil {
@@ -225,6 +228,7 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 // if some error appears http.StatusInternalServerError
 // if everything is OK returns http.StatusNoContent and nothing in body
 func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
 	if err != nil {
@@ -253,6 +257,7 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 // If no data in storage - will be printed such text.
 // If there is any data in storage - will be printed table with data.
 func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "text/html;charset=utf-8")
 	t, err := template.ParseFiles(indexPath)
 	if err != nil {
