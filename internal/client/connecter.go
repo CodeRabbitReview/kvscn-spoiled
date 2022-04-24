@@ -2,8 +2,12 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"io"
-	"log"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -29,6 +33,16 @@ func NewAPI(url string) *API {
 	var t = http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxIdleConns = 20000
 	t.MaxConnsPerHost = 20000
+	caCert, err := ioutil.ReadFile("localhost.pem")
+	if err != nil {
+		zlog.Log.WithName("connector").
+			Error(err, "can not read certificate")
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	t.TLSClientConfig = &tls.Config{
+		RootCAs: caCertPool,
+	}
 	return &API{
 		client: &http.Client{Transport: t, Timeout: 10 * time.Second},
 		url:    url,
@@ -51,8 +65,17 @@ func (c *API) GetAll() (Response, error) {
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return Response{}, err
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return Response{
+				Body:       nil,
+				StatusCode: resp.StatusCode,
+			}, fmt.Errorf("incorrect status code want: %d; get: %d",
+				http.StatusOK, resp.StatusCode)
+	}
+
 	return Response{
 		Body:       data,
 		StatusCode: resp.StatusCode,
@@ -76,7 +99,14 @@ func (c *API) Delete(param string) (Response, error) {
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return Response{}, err
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		return Response{
+				Body:       nil,
+				StatusCode: resp.StatusCode,
+			}, fmt.Errorf("incorrect status code want: %d; get: %d",
+				http.StatusNoContent, resp.StatusCode)
 	}
 	return Response{
 		Body:       data,
@@ -101,7 +131,14 @@ func (c *API) GetByID(param string) (Response, error) {
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return Response{}, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return Response{
+				Body:       nil,
+				StatusCode: resp.StatusCode,
+			}, fmt.Errorf("incorrect status code want: %d; get: %d",
+				http.StatusOK, resp.StatusCode)
 	}
 	return Response{
 		Body:       data,
@@ -130,10 +167,18 @@ func (c *API) AddOrUpdate(param string) (Response, error) {
 	if err != nil {
 		return Response{}, err
 	}
+	if resp.StatusCode != http.StatusCreated {
+		return Response{
+				Body:       nil,
+				StatusCode: resp.StatusCode,
+			}, fmt.Errorf("incorrect status code want: %d; get: %d",
+				http.StatusCreated, resp.StatusCode)
+	}
 	defer func() {
 		resp.Body.Close()
 		req.Body.Close()
 	}()
+
 	return Response{
 		Body:       nil,
 		StatusCode: resp.StatusCode,

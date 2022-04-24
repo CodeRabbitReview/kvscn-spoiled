@@ -14,7 +14,7 @@ func BenchmarkPutConcurrently(b *testing.B) {
 	var err error
 	param := `{"key":"user1","entity": {"misha": 20}}`
 	expectedResult := []byte(`[{"key":"user1","entity":{"misha":20}}]`)
-	c := NewAPI("http://localhost:8080")
+	c := NewAPI("https://localhost:8080")
 	var wg sync.WaitGroup
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -44,7 +44,7 @@ func BenchmarkPutSequentially(b *testing.B) {
 	var err error
 	param := `{"key":"user1","entity": {"misha": 20}}`
 	expectedResult := []byte(`[{"key":"user1","entity":{"misha":20}}]`)
-	c := NewAPI("http://localhost:8080")
+	c := NewAPI("https://localhost:8080")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err = c.AddOrUpdate(param)

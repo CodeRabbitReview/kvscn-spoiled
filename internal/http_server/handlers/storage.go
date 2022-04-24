@@ -3,9 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"html/template"
-	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -36,13 +36,12 @@ type Storager interface {
 // log is a log.Logger
 // and storage is a Storager
 type Storage struct {
-	log     *log.Logger
 	storage Storager
 }
 
 // NewStorage is a constructor of Storage
-func NewStorage(l *log.Logger, s Storager) *Storage {
-	return &Storage{log: l, storage: s}
+func NewStorage(s Storager) *Storage {
+	return &Storage{storage: s}
 }
 
 // ServeHTTP should write reply headers and data to the ResponseWriter
@@ -60,13 +59,15 @@ func NewStorage(l *log.Logger, s Storager) *Storage {
 // id can be any value
 // if URL is incorrect returns http.StatusNotFound and nothing in body
 func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user call", "search host",
+		r.Host, "user url", r.URL.User, "host", r.URL.Host)
 	url := r.URL.String()
 
 	if !strings.HasPrefix(url, "/api/") {
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
@@ -74,7 +75,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusNotAcceptable,
-		}, s.log)
+		})
 		return
 	}
 
@@ -108,7 +109,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sendResponse(w, response{
 		Data:       fmt.Errorf("not found action by input url"),
 		StatusCode: http.StatusNotFound,
-	}, s.log)
+	})
 }
 
 // GetAll sends data to http.ResponseWriter in JSON format
@@ -122,7 +123,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
@@ -143,13 +144,13 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 	}
 
 	sendResponse(w, response{
 		Data:       resp,
 		StatusCode: http.StatusOK,
-	}, s.log)
+	})
 }
 
 // Get sends data to http.ResponseWriter in JSON format
@@ -166,7 +167,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 	data, err := s.storage.Get(pair.Key)
@@ -174,14 +175,14 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
 	sendResponse(w, response{
 		Data:       data.JSON(),
 		StatusCode: http.StatusOK,
-	}, s.log)
+	})
 }
 
 // Put method takes data from http.Request body.
@@ -202,7 +203,7 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 
@@ -211,14 +212,14 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusBadRequest,
-		}, s.log)
+		})
 		return
 	}
 
 	sendResponse(w, response{
 		Data:       nil,
 		StatusCode: http.StatusCreated,
-	}, s.log)
+	})
 }
 
 // Delete sends data to http.ResponseWriter in JSON format
@@ -235,7 +236,7 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 	err = s.storage.Delete(pair.Key)
@@ -243,13 +244,13 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
 	sendResponse(w, response{
 		StatusCode: http.StatusNoContent,
-	}, s.log)
+	})
 }
 
 // OutHTML takes all data from Storage
@@ -261,11 +262,10 @@ func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html;charset=utf-8")
 	t, err := template.ParseFiles(indexPath)
 	if err != nil {
-		s.log.Println(err)
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 
@@ -286,7 +286,7 @@ func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 }

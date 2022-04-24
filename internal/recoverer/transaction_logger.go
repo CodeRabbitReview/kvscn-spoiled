@@ -5,8 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/client"
-	"log"
-	"net/http"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"os"
 	"strings"
 	"sync"
@@ -38,7 +37,6 @@ func (a *Actions) in(action string) bool {
 // TransactionLogger contains options to recover data
 type TransactionLogger struct {
 	fileName string
-	logger   *log.Logger
 	c        chan Recovered
 }
 
@@ -46,22 +44,22 @@ type TransactionLogger struct {
 // if fileName is empty string will use DefaultSaveFile
 // if there is not a file with input fileName
 // NewTransactionLogger will create new file by this name
-func NewTransactionLogger(fileName string, l *log.Logger) *TransactionLogger {
+func NewTransactionLogger(fileName string) *TransactionLogger {
 	if fileName == "" {
 		fileName = DefaultSaveFile
 	}
 
 	_, err := os.Stat(fileName)
 	if errors.Is(err, os.ErrNotExist) {
-		_, err := os.Create(fileName)
+		_, err = os.Create(fileName)
 		if err != nil {
-			l.Fatal(err)
+			zlog.Log.WithName("transaction logger").
+				Error(err, "can not create file with", "name", fileName)
 		}
 	}
 
 	return &TransactionLogger{
 		fileName: fileName,
-		logger:   l,
 		c:        make(chan Recovered),
 	}
 }
@@ -79,32 +77,44 @@ func (r *TransactionLogger) RecoverData(action, data string, actions Actions) er
 		os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 
 	if err != nil {
-		r.logger.Fatal(err)
+		zlog.Log.WithName("transaction logger").
+			Error(err, "can not open recover file")
+		return fmt.Errorf("did not recover data: %s", err)
 	}
 	defer f.Close()
 	_, err = f.WriteString(fmt.Sprintf("%s\t%s\n", action, data))
 	if err != nil {
-		return err
+		zlog.Log.WithName("transaction logger").
+			Error(err, "can not write recovered data")
+		return fmt.Errorf("did not write recovered data into file: %s", err)
 	}
+
+	zlog.Log.WithName("transaction logger").
+		Info("recovered", "action:", action)
 	return nil
 }
 
 func (r *TransactionLogger) takeRecovered() {
 	_, err := os.Stat(r.fileName)
 	if err != nil {
-		r.logger.Fatal(err)
+		zlog.Log.Error(err, "can not get file info")
+		return
 	}
 	f, err := os.OpenFile(r.fileName,
 		os.O_RDONLY, 0644)
 	if err != nil {
-		r.logger.Fatal(err)
+		zlog.Log.WithName("transaction logger").
+			Error(err, "can not open recover file")
+		return
 	}
 	defer f.Close()
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		err = sc.Err()
 		if err != nil {
-			r.logger.Fatalf("scan file error: %v", err)
+			zlog.Log.WithName("transaction logger").
+				Error(err, "did not write data into recover file")
+			return
 		}
 		recoverData := strings.Split(sc.Text(), "\t")
 		r.c <- Recovered{
@@ -112,13 +122,9 @@ func (r *TransactionLogger) takeRecovered() {
 			data:   recoverData[1],
 		}
 	}
-	err = sc.Err()
-	if err != nil {
-		r.logger.Fatalf("scan file error: %v", err)
-	}
 	err = os.Truncate(r.fileName, 0)
 	if err != nil {
-		r.logger.Fatal(err)
+		return
 	}
 	r.c <- Recovered{}
 }
@@ -127,7 +133,7 @@ func (r *TransactionLogger) takeRecovered() {
 // first requests will put after it delete
 func (r *TransactionLogger) SendRecovered(port string) {
 	go r.takeRecovered()
-	client := client.NewAPI(fmt.Sprintf("http://localhost%s", port))
+	client := client.NewAPI(fmt.Sprintf("https://localhost%s", port))
 	defer close(r.c)
 	wg := &sync.WaitGroup{}
 	var toDelete []string
@@ -141,12 +147,11 @@ func (r *TransactionLogger) SendRecovered(port string) {
 			wg.Add(1)
 			go func(data string) {
 				defer wg.Done()
-				resp, err := client.AddOrUpdate(data)
+				_, err := client.AddOrUpdate(data)
 				if err != nil {
-					r.logger.Fatal(err)
-				}
-				if resp.StatusCode != http.StatusCreated {
-					r.logger.Println(resp.StatusCode, string(resp.Body))
+					zlog.Log.WithName("transaction logger").
+						Error(err, "did not send data by client")
+					return
 				}
 			}(recovered.data)
 		case "d":
@@ -156,14 +161,18 @@ func (r *TransactionLogger) SendRecovered(port string) {
 
 	wg.Wait()
 	for i := 0; i < len(toDelete); i++ {
+		wg.Add(1)
 		go func(data string) {
-			resp, err := client.Delete(data)
+			defer wg.Done()
+			_, err := client.Delete(data)
 			if err != nil {
-				r.logger.Fatal(err)
-			}
-			if resp.StatusCode != http.StatusNoContent {
-				r.logger.Println(resp.StatusCode, string(resp.Body))
+				zlog.Log.WithName("transaction logger").
+					Error(err, "did not send data by client")
+				return
 			}
 		}(toDelete[i])
 	}
+	wg.Wait()
+	zlog.Log.WithName("transaction logger").
+		Info("send all recovered data to server")
 }

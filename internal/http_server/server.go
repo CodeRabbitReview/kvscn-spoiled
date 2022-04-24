@@ -3,7 +3,7 @@ package httpserver
 import (
 	"context"
 	"crypto/tls"
-	"log"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,11 +19,10 @@ import (
 // it responds to an HTTP request
 type HTTPServer struct {
 	server *http.Server
-	logger *log.Logger
 }
 
 // NewHTTPServer is a constructor of HTTPServer
-func NewHTTPServer(l *log.Logger, h http.Handler) *HTTPServer {
+func NewHTTPServer(h http.Handler) *HTTPServer {
 	cfg := &tls.Config{
 		MinVersion:       tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
@@ -44,7 +43,7 @@ func NewHTTPServer(l *log.Logger, h http.Handler) *HTTPServer {
 		MaxHeaderBytes: 0,
 		TLSConfig:      cfg,
 		TLSNextProto:   make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
-	}, logger: l}
+	}}
 }
 
 type resumer interface {
@@ -58,7 +57,8 @@ func (s *HTTPServer) Run(r resumer) {
 	go func() {
 		if err := s.server.ListenAndServeTLS("localhost.pem",
 			"localhost-key.pem"); err != nil {
-			s.logger.Fatal(err)
+			zlog.Log.Error(err, "can not start https server")
+			return
 		}
 	}()
 
@@ -68,8 +68,9 @@ func (s *HTTPServer) Run(r resumer) {
 	signal.Notify(sc, os.Interrupt)
 	signal.Notify(sc, syscall.SIGTERM)
 	sig := <-sc
-	s.logger.Printf("\ncaught signal %v", sig)
+	zlog.Log.Info("caught system", "signal", sig)
 	tc, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	_ = s.server.Shutdown(tc)
 	cancel()
+	zlog.Log.WithName("storage").Info("server stopped")
 }
