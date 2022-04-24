@@ -50,7 +50,6 @@ func NewAPI(url string) *API {
 	if err != nil {
 		zlog.Log.WithName("connector").
 			Error(err, "can not read certificate")
-	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 	t.TLSClientConfig = &tls.Config{

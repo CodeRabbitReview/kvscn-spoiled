@@ -71,6 +71,7 @@ func BenchmarkPutSequentially(b *testing.B) {
 }
 
 func TestGetAll(t *testing.T) {
+	changeCertPath("./../../localhost.pem")
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if !reflect.DeepEqual(req.URL.String(), "/api/") {
 			t.Errorf("incorrect url %s; want: %s", req.URL.String(), "/api/")
