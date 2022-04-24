@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 )
+
+var certPath = "localhost.pem"
 
 //Response combines response status code and body
 type Response struct {
@@ -33,6 +37,15 @@ func NewAPI(url string) *API {
 	var t = http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxIdleConns = 20000
 	t.MaxConnsPerHost = 20000
+	_, err := os.Stat(certPath)
+	if errors.Is(err, os.ErrNotExist) {
+		zlog.Log.WithName("connector").
+			Info("create client with http only")
+		return &API{
+			client: &http.Client{Transport: t, Timeout: 10 * time.Second},
+			url:    url,
+		}
+	}
 	caCert, err := ioutil.ReadFile("localhost.pem")
 	if err != nil {
 		zlog.Log.WithName("connector").
@@ -41,7 +54,8 @@ func NewAPI(url string) *API {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 	t.TLSClientConfig = &tls.Config{
-		RootCAs: caCertPool,
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    caCertPool,
 	}
 	return &API{
 		client: &http.Client{Transport: t, Timeout: 10 * time.Second},
@@ -53,12 +67,16 @@ func NewAPI(url string) *API {
 // if some errors appear function returns an error
 // Method takes body and response and returns it in Response format
 func (c *API) GetAll() (Response, error) {
+	zlog.Log.WithName("http client").
+		Info("get all data from server", "url", c.url)
 	req, err := http.NewRequest(http.MethodGet, c.url+"/api/", nil)
 	if err != nil {
 		return Response{}, err
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
+		zlog.Log.WithName("http client").
+			Error(err, "can not send request to server")
 		return Response{}, err
 	}
 
@@ -88,12 +106,17 @@ func (c *API) GetAll() (Response, error) {
 // if some errors appear function returns an error
 // Method takes body and response and returns it in Response format
 func (c *API) Delete(param string) (Response, error) {
+	zlog.Log.WithName("http client").
+		Info("delete data from server", "url", c.url,
+			"id", param)
 	req, err := http.NewRequest(http.MethodDelete, c.url+"/api/", bytes.NewBuffer([]byte(param)))
 	if err != nil {
 		return Response{}, err
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
+		zlog.Log.WithName("http client").
+			Error(err, "can not send request to server")
 		return Response{}, err
 	}
 	defer resp.Body.Close()
@@ -120,12 +143,17 @@ func (c *API) Delete(param string) (Response, error) {
 // if some errors appear function returns an error
 // Method takes body and response and returns it in Response format
 func (c *API) GetByID(param string) (Response, error) {
+	zlog.Log.WithName("http client").
+		Info("get data from server", "url", c.url,
+			"id", param)
 	req, err := http.NewRequest(http.MethodGet, c.url+"/api/id", bytes.NewBuffer([]byte(param)))
 	if err != nil {
 		return Response{}, err
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
+		zlog.Log.WithName("http client").
+			Error(err, "can not send request to server")
 		return Response{}, err
 	}
 	defer resp.Body.Close()
@@ -158,6 +186,8 @@ func (c *API) GetByID(param string) (Response, error) {
 // Method takes body and response and returns it in Response format
 // Response.Body is always nil
 func (c *API) AddOrUpdate(param string) (Response, error) {
+	zlog.Log.WithName("http client").
+		Info("create or update data", "url", c.url)
 	buf := bytes.NewBuffer([]byte(param))
 	req, err := http.NewRequest(http.MethodPost, c.url+"/api/", buf)
 	if err != nil {
@@ -165,6 +195,8 @@ func (c *API) AddOrUpdate(param string) (Response, error) {
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
+		zlog.Log.WithName("http client").
+			Error(err, "can not send request to server")
 		return Response{}, err
 	}
 	if resp.StatusCode != http.StatusCreated {

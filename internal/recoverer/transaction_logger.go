@@ -167,7 +167,7 @@ func (r *TransactionLogger) SendRecovered(port string) {
 			_, err := client.Delete(data)
 			if err != nil {
 				zlog.Log.WithName("transaction logger").
-					Error(err, "did not send data by client")
+					Error(err, "did not send data by client to server")
 				return
 			}
 		}(toDelete[i])

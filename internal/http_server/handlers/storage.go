@@ -116,6 +116,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // response is an array of JSON objects
 // if no value in storage returns no data in storage error
 func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to get all")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	storageData, err := s.storage.GetAll()
@@ -141,6 +142,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := json.Marshal(respData)
 	if err != nil {
+		zlog.Log.WithName("http server").Error(err, "cannot marshal json")
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
@@ -160,6 +162,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 // if no value in storage returns no data in storage error
 // Get takes first param from URL from http.Request
 func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to get by id")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
@@ -196,6 +199,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 // Spaces before and after will be removed
 // spaces between words will be changed to _ symbol
 func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to put")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
@@ -229,6 +233,7 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 // if some error appears http.StatusInternalServerError
 // if everything is OK returns http.StatusNoContent and nothing in body
 func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to delete")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
@@ -258,10 +263,13 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 // If no data in storage - will be printed such text.
 // If there is any data in storage - will be printed table with data.
 func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to html out")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "text/html;charset=utf-8")
 	t, err := template.ParseFiles(indexPath)
 	if err != nil {
+		zlog.Log.WithName("http server").
+			Error(err, "cannot parse html template")
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusInternalServerError,
@@ -283,6 +291,8 @@ func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
 
 	err = t.Execute(w, resp)
 	if err != nil {
+		zlog.Log.WithName("http server").
+			Error(err, "cannot execute html template")
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusInternalServerError,

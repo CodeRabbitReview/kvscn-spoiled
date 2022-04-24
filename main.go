@@ -10,12 +10,8 @@ import (
 )
 
 func main() {
-	zlog.Init()
-
 	zlog.Log.WithName("storage").Info("started", "time", time.Now())
-
 	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile)
-
 	storage := storage.NewStorage(r)
 	server := httpserver.NewHTTPServer(handlers.NewStorage(storage))
 	server.Run(r)

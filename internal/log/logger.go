@@ -9,10 +9,16 @@ import (
 
 var Log logr.Logger
 
-func Init() {
-	zapLog, err := zap.NewDevelopment()
+//nolint
+func init() {
+	conf := zap.NewProductionConfig()
+	conf.OutputPaths = []string{
+		"storage.json", "stderr",
+	}
+	zapLog, err := conf.Build()
 	if err != nil {
 		panic(fmt.Sprintf("init zap log err: %s;", err))
 	}
+
 	Log = zapr.NewLogger(zapLog)
 }
