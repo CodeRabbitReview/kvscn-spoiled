@@ -10,11 +10,17 @@ import (
 	"time"
 )
 
+// changeCertPath should be used in test only!
+func changeCertPath(path string) {
+	certPath = path
+}
+
 func BenchmarkPutConcurrently(b *testing.B) {
+	changeCertPath("./../../localhost.pem")
 	var err error
 	param := `{"key":"user1","entity": {"misha": 20}}`
 	expectedResult := []byte(`[{"key":"user1","entity":{"misha":20}}]`)
-	c := NewAPI("http://localhost:8080")
+	c := NewAPI("https://localhost:8080")
 	var wg sync.WaitGroup
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -41,10 +47,11 @@ func BenchmarkPutConcurrently(b *testing.B) {
 }
 
 func BenchmarkPutSequentially(b *testing.B) {
+	changeCertPath("./../../localhost.pem")
 	var err error
 	param := `{"key":"user1","entity": {"misha": 20}}`
 	expectedResult := []byte(`[{"key":"user1","entity":{"misha":20}}]`)
-	c := NewAPI("http://localhost:8080")
+	c := NewAPI("https://localhost:8080")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err = c.AddOrUpdate(param)
@@ -64,6 +71,7 @@ func BenchmarkPutSequentially(b *testing.B) {
 }
 
 func TestGetAll(t *testing.T) {
+	changeCertPath("./../../localhost.pem")
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if !reflect.DeepEqual(req.URL.String(), "/api/") {
 			t.Errorf("incorrect url %s; want: %s", req.URL.String(), "/api/")
@@ -94,6 +102,7 @@ func TestGetAll(t *testing.T) {
 }
 
 func TestGetByID(t *testing.T) {
+	changeCertPath("./../../localhost.pem")
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if !reflect.DeepEqual(req.URL.String(), "/api/id") {
 			t.Errorf("incorrect url %s; want: %s", req.URL.String(), "/api/")
@@ -124,6 +133,7 @@ func TestGetByID(t *testing.T) {
 }
 
 func TestAddOrUpdate(t *testing.T) {
+	changeCertPath("./../../localhost.pem")
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if !reflect.DeepEqual(req.URL.String(), "/api/") {
 			t.Errorf("incorrect url %s; want: %s", req.URL.String(), "/api/")
@@ -147,6 +157,7 @@ func TestAddOrUpdate(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	changeCertPath("./../../localhost.pem")
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if !reflect.DeepEqual(req.URL.String(), "/api/") {
 			t.Errorf("incorrect url %s; want: %s", req.URL.String(), "/api/")

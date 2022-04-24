@@ -2,11 +2,18 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
+
+var certPath = "localhost.pem"
 
 //Response combines response status code and body
 type Response struct {
@@ -29,6 +36,23 @@ func NewAPI(url string) *API {
 	var t = http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxIdleConns = 20000
 	t.MaxConnsPerHost = 20000
+	_, err := os.Stat(certPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return &API{
+			client: &http.Client{Transport: t, Timeout: 10 * time.Second},
+			url:    url,
+		}
+	}
+	caCert, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	t.TLSClientConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    caCertPool,
+	}
 	return &API{
 		client: &http.Client{Transport: t, Timeout: 10 * time.Second},
 		url:    url,
