@@ -127,7 +127,7 @@ func (r *TransactionLogger) takeRecovered() {
 // first requests will put after it delete
 func (r *TransactionLogger) SendRecovered(port string) {
 	go r.takeRecovered()
-	client := client.NewAPI(fmt.Sprintf("http://localhost%s", port))
+	client := client.NewAPI(fmt.Sprintf("https://localhost%s", port))
 	defer close(r.c)
 	wg := &sync.WaitGroup{}
 	var toDelete []string
