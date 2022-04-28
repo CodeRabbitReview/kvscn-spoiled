@@ -50,11 +50,12 @@ func NewAPI(url string) *API {
 	if err != nil {
 		zlog.Log.WithName("connector").
 			Error(err, "can not read certificate")
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
-	t.TLSClientConfig = &tls.Config{
-		MinVersion: tls.VersionTLS12,
-		RootCAs:    caCertPool,
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		t.TLSClientConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			RootCAs:    caCertPool,
+		}
 	}
 	return &API{
 		client: &http.Client{Transport: t, Timeout: 10 * time.Second},
