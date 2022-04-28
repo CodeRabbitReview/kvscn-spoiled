@@ -8,9 +8,15 @@
 ### Now you are in docker container. You need to install curl
 ### 2. Install curl
 
+`apt update; apt install curl`
 
-`apt update; update install curl`
+### 3. change dir
 
-### 3. Run bash script
+`cd /usr/stc/storage`
+
+
+### 4. Run bash script
 
 `bash sender.sh your_data_file`
+
+## Your delimiter is a new space
