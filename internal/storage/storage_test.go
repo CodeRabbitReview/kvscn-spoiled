@@ -3,12 +3,17 @@ package storage
 
 import (
 	"fmt"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"reflect"
 	"sync"
 	"testing"
 )
+
+func init() {
+	zlog.Init("stderr")
+}
 
 func TestNewStorage(t *testing.T) {
 	tests := []struct {

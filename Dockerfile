@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+FROM golang:1.18-alpine as builder
+
+ENV GO111MODULE=on
+
+WORKDIR /storage
+COPY . .
+RUN apk --no-cache add git alpine-sdk build-base gcc
+RUN go mod download
+RUN go build -o storage main.go
+
+FROM alpine:3.15.4
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root
+
+COPY --from=builder /storage/storage .
+COPY  localhost-key.pem .
+COPY  localhost.pem .
+
+CMD ["./storage"]

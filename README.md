@@ -12,7 +12,7 @@
 
 ### 3. change dir
 
-`cd /usr/stc/storage`
+`cd /usr/src/storage`
 
 
 ### 4. Run bash script
