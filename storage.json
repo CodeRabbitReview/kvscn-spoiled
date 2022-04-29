@@ -1,0 +1,8 @@
+{"level":"info","ts":1651237476.9795442,"logger":"storage","caller":"storage/main.go:13","msg":"started","time":1651237476.979535}
+{"level":"info","ts":1651237476.980257,"logger":"transaction logger","caller":"recoverer/transaction_logger.go:177","msg":"send all recovered data to server"}
+{"level":"info","ts":1651237530.193923,"logger":"http server","caller":"handlers/storage.go:62","msg":"user call","search host":"localhost:8080","user url":"","host":""}
+{"level":"info","ts":1651237530.193988,"logger":"http server","caller":"handlers/storage.go:202","msg":"user request to put"}
+{"level":"info","ts":1651237530.1944902,"logger":"transaction logger","caller":"recoverer/transaction_logger.go:93","msg":"recovered","action:":"p"}
+{"level":"info","ts":1651237555.909475,"caller":"http_server/server.go:74","msg":"caught system","signal":"interrupt"}
+{"level":"error","ts":1651237555.9099982,"caller":"http_server/server.go:63","msg":"can not start https server","error":"http: Server closed","stacktrace":"github.com/mishaprokop4ik/storage/internal/http_server.(*HTTPServer).Run.func1\n\t/Users/prokop/Programming/timdev/storage/internal/http_server/server.go:63"}
+{"level":"info","ts":1651237555.911391,"logger":"storage","caller":"http_server/server.go:78","msg":"server stopped"}

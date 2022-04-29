@@ -12,7 +12,7 @@ import (
 )
 
 // DefaultSaveFile is name of file where recovered data will be sent
-const DefaultSaveFile = "recovered"
+const DefaultSaveFile = "persistence/recovered"
 
 // Recovered combines http.Method and data.
 // data should be in json format string

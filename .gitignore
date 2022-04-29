@@ -5,6 +5,6 @@ storage.iml
 /bin/
 /out/
 file.txt
-recovered
-storage.json
+persistence/recovered
+persistence/storage.json
 /internal/storage/storage.json

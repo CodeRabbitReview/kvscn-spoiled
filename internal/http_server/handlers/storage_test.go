@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"bytes"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"io"
@@ -12,6 +13,10 @@ import (
 	"strings"
 	"testing"
 )
+
+func init() {
+	zlog.Init("stderr")
+}
 
 // changeIndexPath only for test usage
 func changeIndexPath(p string) {

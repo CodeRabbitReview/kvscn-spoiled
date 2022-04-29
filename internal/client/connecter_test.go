@@ -3,6 +3,7 @@ package client
 
 import (
 	"fmt"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -11,6 +12,10 @@ import (
 	"testing"
 	"time"
 )
+
+func init() {
+	zlog.Init("stderr")
+}
 
 func BenchmarkPutConcurrently(b *testing.B) {
 	var err error
@@ -140,7 +145,6 @@ func TestGetAll(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestGetByID(t *testing.T) {

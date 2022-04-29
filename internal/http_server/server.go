@@ -66,7 +66,7 @@ func (s *HTTPServer) Run(r resumer) {
 	}()
 
 	go r.SendRecovered(s.server.Addr)
-
+	zlog.Log.Info("server is running")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, os.Interrupt)
 	signal.Notify(sc, syscall.SIGTERM)

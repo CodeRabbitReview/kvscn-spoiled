@@ -3,6 +3,7 @@ package recoverer
 
 import (
 	"fmt"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,10 @@ import (
 	"strings"
 	"testing"
 )
+
+func init() {
+	zlog.Init("stderr")
+}
 
 func TestRecover_RecoverData(t *testing.T) {
 	file, err := ioutil.TempFile("", "storage_test")

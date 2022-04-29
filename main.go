@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	zlog.Log.WithName("storage").Info("started", "time", time.Now())
+	zlog.Init("persistence/storage.json", "stderr")
+	zlog.Log.WithName("storage").Info("started", "time", time.Now().String())
 	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile)
 	storage := storage.NewStorage(r)
 	server := httpserver.NewHTTPServer(handlers.NewStorage(storage), "localhost.pem",

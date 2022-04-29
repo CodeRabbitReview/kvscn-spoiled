@@ -9,12 +9,11 @@ import (
 
 var Log logr.Logger
 
-//nolint
-func init() {
+//"persistence/storage.json", "stderr"
+
+func Init(paths ...string) {
 	conf := zap.NewProductionConfig()
-	conf.OutputPaths = []string{
-		"storage.json", "stderr",
-	}
+	conf.OutputPaths = paths
 	zapLog, err := conf.Build()
 	if err != nil {
 		panic(fmt.Sprintf("init zap log err: %s;", err))
