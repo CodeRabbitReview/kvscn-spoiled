@@ -4,10 +4,39 @@ package storage
 import (
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
+	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"reflect"
 	"sync"
 	"testing"
 )
+
+func TestNewStorage(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    resumer
+		expected *Storage
+	}{
+		{
+			name:  "simple creation without resumer",
+			input: nil,
+			expected: &Storage{
+				pairs:   make(map[Keyer]Entitier),
+				mu:      &sync.RWMutex{},
+				resumer: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewStorage(tt.input)
+
+			if !reflect.DeepEqual(s, tt.expected) {
+				t.Errorf("expected: %v; got: %v", tt.expected, s)
+			}
+		})
+	}
+}
 
 func TestStorage_Put(t *testing.T) {
 	tests := []struct {
@@ -124,6 +153,38 @@ func TestStorage_Put(t *testing.T) {
 			Storage{
 				pairs: make(map[Keyer]Entitier),
 				mu:    &sync.RWMutex{},
+			},
+			nil,
+		},
+		{
+			"recover data",
+			Pair{
+				Key: models.NewKey("struct"),
+				Entity: models.NewEntity(struct {
+					name string
+					age  int
+				}{
+					"misha",
+					20,
+				}, nil),
+			},
+			Storage{
+				pairs: map[Keyer]Entitier{
+					models.NewKey("struct"): models.NewEntity(struct {
+						name string
+						age  int
+					}{
+						"misha",
+						20,
+					}, nil),
+				},
+				mu:      &sync.RWMutex{},
+				resumer: recoverer.NewTransactionLogger(""),
+			},
+			Storage{
+				pairs:   make(map[Keyer]Entitier),
+				mu:      &sync.RWMutex{},
+				resumer: recoverer.NewTransactionLogger(""),
 			},
 			nil,
 		},
@@ -330,6 +391,16 @@ func TestStorage_Delete(t *testing.T) {
 			Storage{
 				pairs: make(map[Keyer]Entitier),
 				mu:    &sync.RWMutex{},
+			},
+			fmt.Errorf("no data in storage"),
+		},
+		{
+			"recover data",
+			models.NewKey(""),
+			Storage{
+				pairs:   make(map[Keyer]Entitier),
+				mu:      &sync.RWMutex{},
+				resumer: recoverer.NewTransactionLogger(""),
 			},
 			fmt.Errorf("no data in storage"),
 		},
