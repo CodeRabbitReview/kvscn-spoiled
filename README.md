@@ -19,4 +19,4 @@
 
 `bash sender.sh your_data_file`
 
-## Your delimiter is a new space
+## Your data delimiter in file is a new line
