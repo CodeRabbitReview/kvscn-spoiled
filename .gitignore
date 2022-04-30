@@ -1,5 +1,6 @@
 /.idea/
 /.git/
+/.vagrant/
 storage.iml
 **/.DS_Store
 /bin/
@@ -9,3 +10,4 @@ persistence/recovered
 persistence/storage.json
 /internal/storage/storage.json
 storage.json
+data.json
