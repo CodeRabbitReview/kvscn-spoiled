@@ -75,5 +75,5 @@ func (s *HTTPServer) Run(r resumer) {
 	tc, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	_ = s.server.Shutdown(tc)
 	cancel()
-	zlog.Log.WithName("storage").Info("server stopped")
+	zlog.Log.WithName("storage").Info("server stopped", "time", time.Now().String())
 }

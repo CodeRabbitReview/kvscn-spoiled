@@ -16,4 +16,4 @@ build: ## Build the binary file
 docker_server:
 	 docker run -v $(pwd)/persistence:/root/persistence -p 8080:8080 --rm miprokop/storage_server
 docker_script:
-	docker run --rm -it --name storage -v ${PWD}:/usr/src/storage --name storage_script ubuntu
+	docker run --rm -it --name storage -v ${PWD}:/usr/src/storage -p 8081:8081 --name storage_script ubuntu
