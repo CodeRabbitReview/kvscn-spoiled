@@ -18,3 +18,5 @@ sudo echo 'export PATH=${GRADLE_HOME}/bin:${PATH}' >> /etc/profile.d/gradle.sh
 sudo echo 'export GRADLE_HOME=/opt/gradle/latest' >> /etc/profile
 sudo echo 'export PATH=${GRADLE_HOME}/bin:${PATH}' >> /etc/profile
 sudo chmod +x /etc/profile.d/gradle.sh
+
+sudo rm openjdk-17.0.2_linux-x64_bin.tar.gz
