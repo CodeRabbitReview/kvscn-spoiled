@@ -17,6 +17,9 @@ Vagrant.configure("2") do |config|
         config.vm.synced_folder ".", "/home/vagrant/workspace/storage"
 
         config.vm.provision :shell, :path => "vagrant_setup/init.sh"
+        config.vm.provision :shell, :path => "vagrant_setup/docker.sh"
+        config.vm.provision :shell, :path => "vagrant_setup/go.sh"
+        config.vm.provision :shell, :path => "vagrant_setup/gradle.sh"
 
         config.vm.network "forwarded_port", guest: 8080, host: 8080,
             auto_correct: true
