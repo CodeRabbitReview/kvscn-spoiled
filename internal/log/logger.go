@@ -9,8 +9,8 @@ import (
 
 var Log logr.Logger
 
-//"persistence/storage.json", "stderr"
-
+// Init inits Log instance
+// takes paths where logs will be sent
 func Init(paths ...string) {
 	conf := zap.NewProductionConfig()
 	conf.OutputPaths = paths
