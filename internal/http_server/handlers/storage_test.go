@@ -3,10 +3,10 @@ package handlers
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -73,7 +73,7 @@ func TestServeHTTP(t *testing.T) {
 			name:           "delete value with key that is not in storage",
 			body:           bytes.NewBuffer([]byte(`{"key": "misha_prokopchyk"}`)),
 			method:         http.MethodDelete,
-			url:            "/api/misha_prokopchyk",
+			url:            "/api/",
 			expectedBody:   `{"response":"no such value by this key"}`,
 			expectedStatus: http.StatusNotFound,
 		},
@@ -349,7 +349,8 @@ func TestPut(t *testing.T) {
 
 func TestGetFromEmptyStorage(t *testing.T) {
 	s := storage.NewStorage()
-	storageServer := NewStorage(nil, s)
+	l := &log.Logger{}
+	storageServer := NewStorage(l, s)
 	tests := []struct {
 		name               string
 		expectedStatusCode int
@@ -359,14 +360,15 @@ func TestGetFromEmptyStorage(t *testing.T) {
 		{
 			name:               "get by id from empty storage",
 			expectedStatusCode: http.StatusNotFound,
-			key:                "key_input",
+			key:                `{"key": "value"}`,
 			expectedBody:       `{"response":"no data in storage"}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/%s", tt.key), nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/id",
+				bytes.NewBuffer([]byte(tt.key)))
 			w := httptest.NewRecorder()
 			handler := http.HandlerFunc(storageServer.ServeHTTP)
 			handler.ServeHTTP(w, req)

@@ -77,7 +77,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	url = strings.Replace(r.URL.String(), "/api", "", 1)
 
-	if url == "id" && r.Method == http.MethodGet {
+	if url == "/id" && r.Method == http.MethodGet {
 		s.Get(w, r)
 		return
 	}
