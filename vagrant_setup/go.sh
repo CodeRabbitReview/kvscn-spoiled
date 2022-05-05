@@ -8,6 +8,7 @@ sudo echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
 sudo echo 'export GOPATH=/usr/local' >> /etc/profile
 sudo echo 'export PATH=$PATH:$GOPATH/bin' >> /etc/profile
 sudo echo 'export GO111MODULE=on' >> /etc/profile
+sudo echo 'export CGO_ENABLE=0' >> /etc/profile
 source /etc/profile
 sudo rm go1.18.1.linux-amd64.tar.gz
 go install honnef.co/go/tools/cmd/staticcheck@latest

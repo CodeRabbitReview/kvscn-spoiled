@@ -7,6 +7,8 @@ sudo apt update -y
 sudo apt-cache policy docker-ce
 sudo apt install docker-ce -y
 sudo usermod -aG docker $(whoami)
+sudo usermod -aG docker vagrant
+sudo chmod 666 /var/run/docker.sock
 sudo chmod 666 /var/run/docker.sock
 
 sudo touch /var/lib/cloud/instance/locale-check.skip
