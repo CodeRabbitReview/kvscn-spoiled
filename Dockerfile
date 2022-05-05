@@ -7,7 +7,7 @@ WORKDIR /storage
 COPY . .
 RUN apk --no-cache add git alpine-sdk build-base gcc
 RUN go mod download
-RUN go build -o storage main.go
+RUN CGO_ENABLE=0 go build -o storage main.go
 
 FROM alpine:3.15.4
 
