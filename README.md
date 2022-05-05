@@ -8,7 +8,7 @@
 ### Now you are in docker container. You need to install curl
 ### 2. Install curl
 
-`apt update; apt install curl`
+`apt-get update; apt-get install curl -y`
 
 ### 3. change dir
 
