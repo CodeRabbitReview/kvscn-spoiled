@@ -8,14 +8,14 @@
 Vagrant.configure("2") do |config|
     config.vm.provider "virtualbox" do |v|
       v.memory = 2048
-      v.cpus = 2
+      v.cpus = 4
     end
-    config.vm.box = "ubuntu/trusty64"
+    config.vm.box = "ubuntu/xenial64"
 
         config.vm.hostname = "mylocal.dev"
-
-        config.vm.synced_folder ".", "/home/vagrant/workspace/storage"
-
+        config.vm.synced_folder ".", "/workspace/storage/",
+          :owner => 'vagrant',
+          :group => 'root'
         config.vm.provision :shell, :path => "vagrant_setup/init.sh"
         config.vm.provision :shell, :path => "vagrant_setup/docker.sh"
         config.vm.provision :shell, :path => "vagrant_setup/go.sh"
