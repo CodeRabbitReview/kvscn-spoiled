@@ -7,7 +7,6 @@ val port = "8080"
 
 description = "Storage gradle"
 version = "1.0.0"
-
 tasks {
     task("format") {
         group = "Clean code"
@@ -130,6 +129,7 @@ tasks {
     task("sanityCheck") {
         group = "sanity"
         description = "Run key-value server and execute sender.sh script"
+        dependsOn("dockerBuild")
         doLast {
             exec {
                 commandLine = listOf("bash", "run.sh")
