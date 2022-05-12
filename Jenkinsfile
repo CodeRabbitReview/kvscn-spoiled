@@ -1,25 +1,26 @@
 #!/usr/bin/env groovy
 
-node() {
-    def root = tool name: 'Go 1.18', type: 'go'
-    stage('Preparation') {
-        checkout scm
-    }
-    stage('Build') {
-        sh "{$root}/bin/go build"
-    }
-   stage ('Test'){
-       withEnv(["GOPATH=${WORKSPACE}", "PATH+GO=${root}/bin:${WORKSPACE}/bin", "GOBIN=${WORKSPACE}/bin"]){
-         sh "go get github.com/golang/lint/golint"
+node {
+    def root = tool type: 'go', name: 'Go 1.18.2'
 
-         try{
-           sh "golint ."
-           sh "${tool} build ./..."
-         } catch (err){
-           sh "echo static analyis failed.  See report"
-         }
-
-         warnings canComputeNew: true, canResolveRelativePaths: true, categoriesPattern: '', consoleParsers: [[parserName: 'Go Vet'], [parserName: 'Go Lint']], defaultEncoding: '', excludePattern: '', healthy: '', includePattern: '', messagesPattern: '', unHealthy: ''
-       }
-     }
+    withEnv(["GOROOT=${root}",
+     "PATH+GO=${root}/bin",
+     "GO111MODULE=on",
+     "CGO_ENABLED=0"]) {
+        stage('SetUp') {
+            checkout scm
+        }
+        stage('Build') {
+            sh 'go build -o storage -a .'
+        }
+        stage('Test') {
+            try {
+                sh 'go test ./... --cover -v > test.out'
+            } catch(Exception e) {
+                echo "Error in testing storage project: ${e.toString()}"
+                sh 'cat test.out'
+                throw new Exception('Error in running tests(any test did not finish correctly)')
+            }
+        }
+    }
 }
