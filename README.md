@@ -2,21 +2,20 @@
 
 ### 1. Run next code in storage dir
 
-
-`docker run --rm -it --name storage -v ${PWD}:/usr/src/storage ubuntu`
+`docker run --rm -it --name storage_script12 -v ${PWD}:/usr/src/storage ubuntu`
 
 ### Now you are in docker container. You need to install curl
 ### 2. Install curl
 
-`apt update; apt install curl`
+`apt update; apt install curl -y`
 
 ### 3. change dir
 
-`cd /usr/stc/storage`
+`cd /usr/src/storage`
 
 
 ### 4. Run bash script
 
-`bash sender.sh your_data_file`
+`bash sender.sh your_data_file your machine(default mac)`
 
 ## Your data delimiter in file is a new line
