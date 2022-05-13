@@ -3,7 +3,7 @@
 ### 1. Run next code in storage dir
 
 
-`docker run -it -v $(pwd):/usr/src/storage --network=host --name storage_script --rm ubuntu`
+`docker run -it -v $(pwd):/usr/src/storage --name storage_script --rm ubuntu`
 
 ### Now you are in docker container. You need to install curl
 ### 2. Install curl

@@ -14,8 +14,8 @@ precommit: fmt lint test
 build: ## Build the binary file
 	go build -o ./bin/${BIN_NAME} -a .
 docker_server:
-	 docker run -v $(pwd)/persistence:/root/persistence -p 8080:8080 --network=host --name storage_server --rm miprokop/storage_server
+	 docker run -v $(pwd)/persistence:/root/persistence -p 8080:8080 --name storage_server --rm miprokop/storage_server
 docker_script:
-	docker run -it -v $(pwd):/usr/src/storage --network=host --name storage_script1 --rm ubuntu
+	docker run -it -v $(pwd):/usr/src/storage --name storage_script --rm ubuntu
 
 --add-host=localhost:127.0.0.1
