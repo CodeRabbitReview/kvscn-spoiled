@@ -4,7 +4,7 @@ stopServer=$2
 host=$3
 statusCode=0
 
-if [ "hostType" == "m" ]
+if [ "$host" == "m" ]
 then
   host="host.docker.internal"
 else
