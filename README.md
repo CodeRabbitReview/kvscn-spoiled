@@ -3,12 +3,12 @@
 ### 1. Run next code in storage dir
 
 
-`docker run --rm -it --name storage -v ${PWD}:/usr/src/storage ubuntu`
+`docker run -it -v $(pwd):/usr/src/storage --network=host --name storage_script --rm ubuntu`
 
 ### Now you are in docker container. You need to install curl
 ### 2. Install curl
 
-`apt update; apt install curl`
+`apt update; apt install curl -y`
 
 ### 3. change dir
 
