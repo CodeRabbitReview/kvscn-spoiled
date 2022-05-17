@@ -80,6 +80,7 @@ func (s *Storage) Put(p Pair) error {
 
 	if v, ok := s.pairs[p.Key]; !ok ||
 		v != nil && string(v.JSON()) != string(p.Entity.JSON()) {
+		s.mu.Lock()
 		if s.resumer != nil {
 			err := s.resumer.RecoverData("p", string(p.Entity.JSON()), recoverer.DefaultActions)
 			if err != nil {
@@ -87,7 +88,6 @@ func (s *Storage) Put(p Pair) error {
 			}
 		}
 
-		s.mu.Lock()
 		defer s.mu.Unlock()
 		s.pairs[p.Key] = p.Entity
 	}
