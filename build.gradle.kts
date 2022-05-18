@@ -2,15 +2,17 @@ import java.lang.Float.parseFloat
 
 val binaryDir = "bin"
 val binaryName = "storage_server"
-val dockerName = "miprokop/storage_server"
+val dockerName = "miprokop/storage_server:v2"
 val port = "8080"
+val k8sTemplatesPath = "templates/"
+val storageDeployManifestFile = "storage_deploy.yaml"
 
 description = "Storage gradle"
 version = "1.0.0"
 
 tasks.register("format") {
     group = "Clean code"
-    description = "Format project by go fmt action"
+    description = "Formats project by go fmt action"
     doLast {
         exec {
             commandLine = listOf("go", "fmt", "./...")
@@ -18,9 +20,29 @@ tasks.register("format") {
     }
 }
 
+tasks.register("deploy") {
+    group = "k8s"
+    description = "Deploys the key-value storage app on the Kubernetes cluster"
+    doLast {
+        exec {
+            commandLine = listOf("kubectl", "apply", "-f", "${k8sTemplatesPath}${storageDeployManifestFile}")
+        }
+    }
+}
+
+tasks.register("undeploy") {
+    group = "k8s"
+    description = "Removes the key-value storage app from the Kubernetes cluster"
+    doLast {
+        exec {
+            commandLine = listOf("kubectl", "delete", "-f", "${k8sTemplatesPath}${storageDeployManifestFile}")
+        }
+    }
+}
+
 tasks.register("optimizeDependencies") {
     group = "Clean code"
-    description = "Remove unused and download dependencies"
+    description = "Removes unused and download dependencies"
     doLast {
         exec {
             commandLine = listOf("go", "mod", "tidy")
@@ -30,7 +52,7 @@ tasks.register("optimizeDependencies") {
 
 tasks.register("staticCheck") {
     group ="Clean code"
-    description = "Run staticcheck util"
+    description = "Runs staticcheck util"
     doLast {
         exec {
             commandLine = listOf("staticcheck", "-f", "json", "./...")
@@ -40,13 +62,13 @@ tasks.register("staticCheck") {
 
 tasks.register("cleanCode") {
     group ="Clean code"
-    description = "Run format, optimizeDependencies, staticCheck tasks"
+    description = "Runs format, optimizeDependencies, staticCheck tasks"
     dependsOn("format", "optimizeDependencies", "staticCheck")
 }
 
 tasks.register("build") {
     group = "build"
-    description = "Build binary of project"
+    description = "Builds binary of project"
     doLast {
         exec {
             commandLine = listOf("go", "build", "-o", "./${binaryDir}/${binaryName}", "-a", ".")
@@ -56,7 +78,7 @@ tasks.register("build") {
 
 tasks.register("test") {
     group = "tests"
-    description = "Run all tests in project"
+    description = "Runs all tests in project"
     doLast {
         exec {
             commandLine = listOf("go", "test", "--cover", "./...")
@@ -66,7 +88,7 @@ tasks.register("test") {
 
 tasks.register("golint") {
     group = "Clean code"
-    description = "Run go lint util"
+    description = "Runs go lint util"
     doLast {
         exec {
             commandLine = listOf("golangci-lint", "run", "--timeout=5m", "-c", ".golangci.yml")
@@ -76,7 +98,7 @@ tasks.register("golint") {
 
 tasks.register("dockerBuild") {
     group = "docker"
-    description = "Build docker image by Dockerfile"
+    description = "Builds docker image by Dockerfile"
     doLast {
         exec {
             commandLine = listOf("docker", "build", "-t", dockerName, ".")
@@ -86,7 +108,7 @@ tasks.register("dockerBuild") {
 
 tasks.register("push") {
     group = "docker"
-    description = "Push the key-value docker image to dockerhub"
+    description = "Pushes the key-value docker image to dockerhub"
     doLast {
         exec {
             commandLine = listOf("docker", "push",  dockerName)
@@ -96,7 +118,7 @@ tasks.register("push") {
 
 tasks.register("testingDone") {
     group = "tests"
-    description = "Run go tests with coverage report and fail if doesn’t match the low boundary of 75 percent"
+    description = "Runs go tests with coverage report and fail if doesn’t match the low boundary of 75 percent"
     val out = java.io.ByteArrayOutputStream()
     val ps = java.io.PrintStream(out)
     val old = System.out
@@ -128,7 +150,7 @@ tasks.register("testingDone") {
 
 tasks.register("sanityCheck") {
     group = "sanity"
-    description = "Run key-value server and execute sender.sh script"
+    description = "Runs key-value server and execute sender.sh script"
     dependsOn("dockerBuild")
     doLast {
         exec {
