@@ -35,7 +35,6 @@ func NewHTTPServer(h http.Handler, certPath, keyPath string) *HTTPServer {
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
 		},
-		PreferServerCipherSuites: true,
 	}
 	return &HTTPServer{server: &http.Server{
 		Addr:           ":8080",
@@ -66,7 +65,7 @@ func (s *HTTPServer) Run(r resumer) {
 	}()
 
 	go r.SendRecovered(s.server.Addr)
-	zlog.Log.Info("server is running")
+	zlog.Log.Info("server is running", "on", s.server.Addr)
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, os.Interrupt)
 	signal.Notify(sc, syscall.SIGTERM)
