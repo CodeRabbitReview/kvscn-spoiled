@@ -1,2 +1,10 @@
-.idea
+/.idea/
 README.md
+/gradle/
+/vagrant_setup/
+ubuntu-xenial-16.04-cloudimg-console.log
+/bin/
+/templates/
+/.vagrant/
+/.gradle/
+/out/
