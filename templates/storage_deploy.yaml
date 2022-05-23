@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: storage
+  name: storage-d
 spec:
   replicas: 1
   selector:
@@ -27,16 +27,21 @@ spec:
               cpu: 100m
               memory: 200Mi
           volumeMounts:
+            - name: storage-volume
+              mountPath: /root/persistence
             - name: storage-recovered
               mountPath: /root/persistence/recovered
             - name: storage-logs
               mountPath: /root/persistence/storage.json
       volumes:
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: storage-pvc
         - name: storage-recovered
           hostPath:
-            path: /persistence/recovered
+            path: /root/persistence/recovered
             type: FileOrCreate
         - name: storage-logs
           hostPath:
-            path: /persistence/storage.json
+            path: /root/persistence/storage.json
             type: FileOrCreate
