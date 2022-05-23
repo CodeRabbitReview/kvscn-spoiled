@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: storage-pv
+  labels:
+    type: local
+spec:
+  volumeMode: Filesystem
+  storageClassName: hostpath
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /root/persistence
