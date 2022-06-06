@@ -23,18 +23,31 @@ type HTTPServer struct {
 	keyPath  string
 }
 
+type KeyCertPaths struct {
+	Key         string
+	Certificate string
+}
+
 // NewHTTPServer is a constructor of HTTPServer
-func NewHTTPServer(h http.Handler, certPath, keyPath string) *HTTPServer {
+func NewHTTPServer(h http.Handler, certPaths ...KeyCertPaths) *HTTPServer {
 	cfg := &tls.Config{
 		MinVersion:       tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		//nolint
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
 		},
+	}
+	for _, c := range certPaths {
+		pair, err := tls.LoadX509KeyPair(c.Certificate, c.Key)
+		if err != nil {
+			zlog.Log.Error(err, "can not read certificate", "key file name: ", c.Key,
+				"cert file name:", c.Certificate)
+			return nil
+		}
+		cfg.Certificates = append(cfg.Certificates, pair)
 	}
 	return &HTTPServer{server: &http.Server{
 		Addr:           ":8080",
@@ -45,7 +58,7 @@ func NewHTTPServer(h http.Handler, certPath, keyPath string) *HTTPServer {
 		MaxHeaderBytes: 0,
 		TLSConfig:      cfg,
 		TLSNextProto:   make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
-	}, certPath: certPath, keyPath: keyPath}
+	}}
 }
 
 type resumer interface {
