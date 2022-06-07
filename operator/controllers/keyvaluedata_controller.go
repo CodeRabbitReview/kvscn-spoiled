@@ -65,9 +65,10 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	entities := keyValueData.Spec.Data
 
-	var requestStatuses = []*kvdv1beta1.Condition{}
+	var requestStatuses = make([]*kvdv1beta1.Condition, len(entities))
 	var successSends int32
 	var failedSends int32
+	var i int32
 	for k, e := range entities {
 		reqData := &DataRequest{
 			Key:    k,
@@ -75,25 +76,27 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		if len(k) == 0 || len(e) == 0 {
 			logger.Error(fmt.Errorf("empty key or value"), "can not marshall req data")
-			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
+			requestStatuses[i] = &kvdv1beta1.Condition{
 				Key:    k,
 				Type:   kvdv1beta1.FailedType,
 				Status: kvdv1beta1.FailedStatus,
 				Reason: "empty key or value",
-			})
+			}
+			i++
 			failedSends++
 			continue
 		}
 		marshalRequestData, err := json.Marshal(reqData)
 		if err != nil {
 			logger.Error(err, "can not marshall req data")
-			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
+			requestStatuses[i] = &kvdv1beta1.Condition{
 				Key:    k,
 				Type:   kvdv1beta1.FailedType,
 				Status: kvdv1beta1.FailedStatus,
 				Reason: fmt.Sprintf("%s: %s",
 					"can not marshall req data", err.Error()),
-			})
+			}
+			i++
 			failedSends++
 			continue
 		}
@@ -103,26 +106,28 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err != nil && err != io.EOF {
 			logger.Error(err, "can not create http request")
 			logger.Error(err, "can not read req data to http request")
-			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
+			requestStatuses[i] = &kvdv1beta1.Condition{
 				Key:    k,
 				Type:   kvdv1beta1.FailedType,
 				Status: kvdv1beta1.FailedStatus,
 				Reason: fmt.Sprintf("%s: %s",
 					"can not create request to server", err.Error()),
-			})
+			}
+			i++
 			failedSends++
 			continue
 		}
 		response, err := r.HTTPClient.Do(postRequest)
 		if err != nil {
 			logger.Error(err, "can not send request")
-			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
+			requestStatuses[i] = &kvdv1beta1.Condition{
 				Key:    k,
 				Type:   kvdv1beta1.FailedType,
 				Status: kvdv1beta1.FailedStatus,
 				Reason: fmt.Sprintf("%s: %s",
 					"can not send request data to server", err.Error()),
-			})
+			}
+			i++
 			failedSends++
 			continue
 		}
@@ -144,24 +149,26 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				m = response.Status
 			}
 
-			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
+			requestStatuses[i] = &kvdv1beta1.Condition{
 				Key:     k,
 				Type:    kvdv1beta1.FailedType,
 				Status:  kvdv1beta1.FailedStatus,
 				Reason:  reason,
 				Message: m,
-			})
+			}
+			i++
 			failedSends++
 			continue
 		}
 		response.Body.Close()
 
-		requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
+		requestStatuses[i] = &kvdv1beta1.Condition{
 			Key:            k,
 			Type:           kvdv1beta1.AddedType,
 			Status:         kvdv1beta1.SuccessStatus,
 			LastInsertTime: &metav1.Time{Time: time.Now()},
-		})
+		}
+		i++
 		successSends++
 	}
 
