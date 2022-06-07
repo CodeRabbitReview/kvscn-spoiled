@@ -14,28 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controllers_test
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
-	"path/filepath"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"testing"
-	"time"
-
+	"github.com/miprokop/crd-kvd/api/v1beta1"
+	"github.com/miprokop/crd-kvd/controllers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"net/http"
+	"net/http/httptest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	keyvaluev1beta1 "github.com/miprokop/crd-kvd/api/v1beta1"
+	"testing"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,6 +40,7 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var reconciler controllers.KeyValueDataReconciler
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -55,22 +51,8 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	_ = v1beta1.AddToScheme(scheme.Scheme)
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-
-	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
-		ErrorIfCRDPathMissing: true,
-	}
-
-	var err error
-	// cfg is defined in this file globally.
-	cfg, err = testEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
-
-	err = keyvaluev1beta1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
 	testNumber := 0
 	var testServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		if testNumber == 0 {
@@ -80,38 +62,11 @@ var _ = BeforeSuite(func() {
 			rw.WriteHeader(http.StatusInternalServerError)
 		}
 	}))
-
-	//+kubebuilder:scaffold:scheme
-
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
-	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme},
-	)
-	Expect(err).ToNot(HaveOccurred())
-	err = (&KeyValueDataReconciler{
-		Client:     k8sManager.GetClient(),
-		Scheme:     k8sManager.GetScheme(),
-		HttpClient: &http.Client{},
-		ServerURL:  testServer.URL,
-	}).SetupWithManager(k8sManager)
-	Expect(err).NotTo(HaveOccurred())
-
-	go func() {
-		defer GinkgoRecover()
-		err = k8sManager.Start(context.Background())
-		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
-	}()
-
+	reconciler.ServerURL = testServer.URL
+	reconciler.Scheme = scheme.Scheme
+	reconciler.HttpClient = &http.Client{}
 }, 60)
 
 var _ = AfterSuite(func() {
-	By("tearing down the test environment,but I do nothing here.")
-	err := testEnv.Stop()
-	if err != nil {
-		time.Sleep(4 * time.Second)
-	}
-	err = testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
+
 })
