@@ -37,7 +37,7 @@ import (
 type KeyValueDataReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
-	HttpClient *http.Client
+	HTTPClient *http.Client
 	ServerURL  string
 }
 
@@ -65,7 +65,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	entities := keyValueData.Spec.Data
 
-	var requestStatuses []*kvdv1beta1.Condition
+	var requestStatuses = []*kvdv1beta1.Condition{}
 	var successSends int32
 	var failedSends int32
 	for k, e := range entities {
@@ -113,7 +113,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			failedSends++
 			continue
 		}
-		response, err := r.HttpClient.Do(postRequest)
+		response, err := r.HTTPClient.Do(postRequest)
 		if err != nil {
 			logger.Error(err, "can not send request")
 			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
@@ -141,7 +141,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 			m := string(b)
 			if len(b) == 0 {
-				m = fmt.Sprintf("%s", response.Status)
+				m = response.Status
 			}
 
 			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
@@ -166,10 +166,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	sort.Slice(requestStatuses, func(i, j int) bool {
-		if requestStatuses[i].Key < requestStatuses[j].Key {
-			return true
-		}
-		return false
+		return requestStatuses[i].Key < requestStatuses[j].Key
 	})
 
 	keyValueData.Status.Conditions = requestStatuses

@@ -47,7 +47,6 @@ var _ webhook.Defaulter = &KeyValueData{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *KeyValueData) Default() {
 	keyvaluedatalog.Info("default", "name", r.Name)
-
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -117,6 +116,5 @@ func (r *KeyValueData) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *KeyValueData) ValidateDelete() error {
 	keyvaluedatalog.Info("validate delete", "name", r.Name)
-
 	return nil
 }

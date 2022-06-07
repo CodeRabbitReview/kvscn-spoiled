@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+//nolint
 package controllers_test
 
 import (
@@ -64,7 +64,7 @@ var _ = BeforeSuite(func() {
 	}))
 	reconciler.ServerURL = testServer.URL
 	reconciler.Scheme = scheme.Scheme
-	reconciler.HttpClient = &http.Client{}
+	reconciler.HTTPClient = &http.Client{}
 }, 60)
 
 var _ = AfterSuite(func() {

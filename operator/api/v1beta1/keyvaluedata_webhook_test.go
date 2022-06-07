@@ -1,3 +1,4 @@
+//nolint
 package v1beta1_test
 
 import (

@@ -117,7 +117,7 @@ func main() {
 	if err = (&controllers.KeyValueDataReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
-		HttpClient: httpClient,
+		HTTPClient: httpClient,
 		ServerURL:  "https://storage-service.default.svc.cluster.local:8888/api/",
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KeyValueData")
