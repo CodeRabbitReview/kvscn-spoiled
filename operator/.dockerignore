@@ -24,3 +24,5 @@ vagrant_setup
 build.gradle.kts
 internal
 run.sh
+cover.html
+cover.out
