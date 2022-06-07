@@ -73,7 +73,17 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			Key:    k,
 			Entity: e,
 		}
-
+		if len(k) == 0 || len(e) == 0 {
+			logger.Error(fmt.Errorf("empty key or value"), "can not marshall req data")
+			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
+				Key:    k,
+				Type:   kvdv1beta1.FailedType,
+				Status: kvdv1beta1.FailedStatus,
+				Reason: "empty key or value",
+			})
+			failedSends++
+			continue
+		}
 		marshalRequestData, err := json.Marshal(reqData)
 		if err != nil {
 			logger.Error(err, "can not marshall req data")
@@ -98,7 +108,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Type:   kvdv1beta1.FailedType,
 				Status: kvdv1beta1.FailedStatus,
 				Reason: fmt.Sprintf("%s: %s",
-					"can not marshall req data", err.Error()),
+					"can not create request to server", err.Error()),
 			})
 			failedSends++
 			continue
@@ -111,8 +121,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Type:   kvdv1beta1.FailedType,
 				Status: kvdv1beta1.FailedStatus,
 				Reason: fmt.Sprintf("%s: %s",
-					"can not marshall req data", err.Error()),
-				LastInsertTime: &metav1.Time{Time: time.Now()},
+					"can not send request data to server", err.Error()),
 			})
 			failedSends++
 			continue
@@ -121,9 +130,10 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		if response.StatusCode != http.StatusCreated {
 			var b []byte
+			var reason string
 			_, err = response.Body.Read(b)
-			if err != nil {
-				return ctrl.Result{}, err
+			if err != nil && err != io.EOF {
+				reason = fmt.Sprintf("data is not created: %s", err)
 			}
 			logger.Error(fmt.Errorf("incorrect status code"), "server sent unexpected response",
 				"expected status code", http.StatusCreated,
@@ -135,11 +145,10 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 
 			requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
-				Key:    k,
-				Type:   kvdv1beta1.FailedType,
-				Status: kvdv1beta1.FailedStatus,
-				Reason: fmt.Sprintf("%s: %s",
-					"data is not created", string(b)),
+				Key:     k,
+				Type:    kvdv1beta1.FailedType,
+				Status:  kvdv1beta1.FailedStatus,
+				Reason:  reason,
 				Message: m,
 			})
 			failedSends++
@@ -149,8 +158,8 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		requestStatuses = append(requestStatuses, &kvdv1beta1.Condition{
 			Key:            k,
-			Type:           kvdv1beta1.SuccessStatus,
-			Status:         kvdv1beta1.AddedType,
+			Type:           kvdv1beta1.AddedType,
+			Status:         kvdv1beta1.SuccessStatus,
 			LastInsertTime: &metav1.Time{Time: time.Now()},
 		})
 		successSends++
