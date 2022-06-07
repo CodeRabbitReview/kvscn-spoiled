@@ -1,3 +1,4 @@
+//nolint
 package controllers_test
 
 import (
@@ -67,10 +68,7 @@ var _ = Describe("KeyValueData controller", func() {
 			}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
-				if err != nil {
-					return false
-				}
-				return true
+				return err != nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(1)))
 			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(0)))
@@ -110,10 +108,7 @@ var _ = Describe("KeyValueData controller", func() {
 			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
-				if err != nil {
-					return false
-				}
-				return true
+				return err != nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
 			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
@@ -153,10 +148,7 @@ var _ = Describe("KeyValueData controller", func() {
 			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
-				if err != nil {
-					return false
-				}
-				return true
+				return err != nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
 			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
@@ -196,10 +188,7 @@ var _ = Describe("KeyValueData controller", func() {
 			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
-				if err != nil {
-					return false
-				}
-				return true
+				return err != nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
 			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
@@ -241,10 +230,7 @@ var _ = Describe("KeyValueData controller", func() {
 			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
-				if err != nil {
-					return false
-				}
-				return true
+				return err != nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
 			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(2)))
@@ -294,10 +280,7 @@ var _ = Describe("KeyValueData controller", func() {
 			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
-				if err != nil {
-					return false
-				}
-				return true
+				return err != nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
 			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(2)))
@@ -346,10 +329,7 @@ var _ = Describe("KeyValueData controller", func() {
 			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
-				if err != nil {
-					return false
-				}
-				return true
+				return err != nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
 			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
