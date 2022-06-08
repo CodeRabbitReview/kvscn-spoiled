@@ -43,6 +43,7 @@ type KeyValueDataReconciler struct {
 	ServerURL  string
 }
 
+// DataRequest pair or key and value
 type DataRequest struct {
 	Key    string `json:"key"`
 	Entity string `json:"entity"`
@@ -57,7 +58,16 @@ type DataRequest struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
-func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile gets created resource and write condition of request
+// Reconcile goes throw Spec.Data map and gets key and value data from it.
+// Try to send request to the key value storage - if an error appears Reconcile writes error condition
+// if everything is okay with request and status code does not equal http.StatusCreated
+// tries to get message from server. If there are any messages will be used Response.Status otherwise this message.
+// Also writes error into condition.
+// Sort conditions of all requests in alphabet order.
+// Update the status of corresponding resource.
+func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
+	req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	var keyValueData kvdv1beta1.KeyValueData
 
@@ -71,6 +81,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	var successSends int32
 	var failedSends int32
 	var i int32
+
 	for k, e := range entities {
 		reqData := &DataRequest{
 			Key:    k,
@@ -188,7 +199,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return ctrl.Result{}, err
 }
 
-// SetupWithManager sets up the controller with the Manager.
+// SetupWithManager sets up the controller with the Manager. With GenerationChanged predicate into this manages.
 func (r *KeyValueDataReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kvdv1beta1.KeyValueData{}, builder.WithPredicates(&predicate.GenerationChangedPredicate{})).
