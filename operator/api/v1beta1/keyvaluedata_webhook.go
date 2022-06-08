@@ -29,10 +29,14 @@ import (
 // log is for logging in this package.
 var keyvaluedatalog = logf.Log.WithName("keyvaluedata-resource")
 var c client.Client
+var namespace = "default"
+
 var ErrExistingKey = errors.New("this key already exists")
 var ErrEmptyData = errors.New("empty data field")
 var ErrEmptyKeyOrValue = errors.New("empty key or value")
 
+// SetupWebhookWithManager creates new webhook manages and inits client
+// to access resources in k8s
 func (r *KeyValueData) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	c = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -45,6 +49,7 @@ func (r *KeyValueData) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &KeyValueData{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default does nothing
 func (r *KeyValueData) Default() {
 	keyvaluedatalog.Info("default", "name", r.Name)
 }
@@ -55,21 +60,22 @@ func (r *KeyValueData) Default() {
 var _ webhook.Validator = &KeyValueData{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate checks if any key already exists or key or value empty or Data.Spec is empty
 func (r *KeyValueData) ValidateCreate() error {
 	keyvaluedatalog.Info("validate create", "name", r.Name)
 
 	var createdResources KeyValueDataList
-	if err := c.List(context.Background(), &createdResources); err != nil {
+	if err := c.List(context.Background(), &createdResources, client.InNamespace(namespace)); err != nil {
 		keyvaluedatalog.Error(err, "can not get all KeyValueData resources")
 		return err
+	}
+	if len(r.Spec.Data) == 0 {
+		return ErrEmptyData
 	}
 	for k, v := range r.Spec.Data {
 		if k == "" || v == "" {
 			return ErrEmptyKeyOrValue
 		}
-	}
-	if len(r.Spec.Data) == 0 {
-		return ErrEmptyData
 	}
 	for _, keyValueData := range createdResources.Items {
 		if ok := r.containsAny(keyValueData.Spec.Data); ok {
@@ -89,11 +95,12 @@ func (r *KeyValueData) containsAny(d Data) bool {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate checks if any key already exists or key or value empty or Data.Spec is empty
 func (r *KeyValueData) ValidateUpdate(old runtime.Object) error {
-	keyvaluedatalog.Info("validate create", "name", r.Name)
+	keyvaluedatalog.Info("validate update", "name", r.Name)
 
 	var createdResources KeyValueDataList
-	if err := c.List(context.Background(), &createdResources); err != nil {
+	if err := c.List(context.Background(), &createdResources, client.InNamespace(namespace)); err != nil {
 		keyvaluedatalog.Error(err, "can not get all KeyValueData resources")
 		return err
 	}
@@ -114,6 +121,7 @@ func (r *KeyValueData) ValidateUpdate(old runtime.Object) error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete checks nothing
 func (r *KeyValueData) ValidateDelete() error {
 	keyvaluedatalog.Info("validate delete", "name", r.Name)
 	return nil
