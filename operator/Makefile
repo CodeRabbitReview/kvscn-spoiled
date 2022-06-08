@@ -66,6 +66,9 @@ test: manifests generate fmt vet envtest ## Run tests.
 build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
+lint: ## lint the files local env
+	$(GOLINT) run --timeout=5m -c .golangci.yml
+
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
