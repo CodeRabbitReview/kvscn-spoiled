@@ -26,6 +26,11 @@ tasks.register("deploy") {
     description = "Deploys the key-value storage app on the Kubernetes cluster"
     doFirst {
         exec {
+            commandLine = listOf("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml")
+        }
+    }
+    doFirst {
+        exec {
             commandLine = listOf("kubectl", "apply", "-f", "${k8sTemplatesPath}${metricsServerManifestFile}")
         }
     }
