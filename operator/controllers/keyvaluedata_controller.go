@@ -83,6 +83,9 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 		logger.Info("add default finalizer", "resource name: ", keyValueData.Name)
 		if !controllerutil.ContainsFinalizer(&keyValueData, r.FinalizerName) {
 			controllerutil.AddFinalizer(&keyValueData, r.FinalizerName)
+			if err := r.Update(ctx, &keyValueData); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	} else {
 		logger.Info("delete corresponding data before resource deletion",
@@ -134,12 +137,12 @@ func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kv
 	var i int32
 
 	for k, e := range entities {
-		reqData := &DataRequest{
+		requestData := &DataRequest{
 			Key:    k,
 			Entity: e,
 		}
 		logger.Info("request key", "key: ", k)
-		marshalRequestData, err := json.Marshal(reqData)
+		marshalledRequestData, err := json.Marshal(requestData)
 		if err != nil {
 			logger.Error(err, "can not marshall req data")
 			requestStatuses[i] = &kvdv1beta1.Condition{
@@ -155,8 +158,8 @@ func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kv
 		}
 		logger.Info("marshalled resource", "key: ", k, "time: ", time.Now().String())
 
-		postRequest, err := http.NewRequest(method, r.ServerURL,
-			bytes.NewBuffer(marshalRequestData))
+		request, err := http.NewRequest(method, r.ServerURL,
+			bytes.NewBuffer(marshalledRequestData))
 		if err != nil && err != io.EOF {
 			logger.Error(err, "can not create http request")
 			logger.Error(err, "can not read req data to http request")
@@ -171,7 +174,7 @@ func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kv
 			failedSends++
 			continue
 		}
-		response, err := r.HTTPClient.Do(postRequest)
+		response, err := r.HTTPClient.Do(request)
 		if err != nil {
 			logger.Error(err, "can not send request")
 			requestStatuses[i] = &kvdv1beta1.Condition{
@@ -186,7 +189,7 @@ func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kv
 			continue
 		}
 		logger.Info("sent request to server", "key: ", k, "time: ", time.Now().String())
-		postRequest.Body.Close()
+		request.Body.Close()
 
 		if response.StatusCode != expectedStatusCode {
 			var b []byte
