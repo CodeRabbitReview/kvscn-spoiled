@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sort"
@@ -38,9 +39,10 @@ import (
 // KeyValueDataReconciler reconciles a KeyValueData object
 type KeyValueDataReconciler struct {
 	client.Client
-	Scheme     *runtime.Scheme
-	HTTPClient *http.Client
-	ServerURL  string
+	Scheme        *runtime.Scheme
+	HTTPClient    *http.Client
+	ServerURL     string
+	FinalizerName string
 }
 
 // DataRequest pair or key and value
@@ -70,13 +72,62 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 	req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	var keyValueData kvdv1beta1.KeyValueData
-
 	if err := r.Get(ctx, req.NamespacedName, &keyValueData); err != nil {
 		logger.Error(err, "unable to fetch KeyValueData")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	entities := keyValueData.Spec.Data
+	logger.Info("got key value data resource", "name: ", keyValueData.Name,
+		"time: ", time.Now().String())
 
+	if keyValueData.ObjectMeta.DeletionTimestamp.IsZero() {
+		logger.Info("add default finalizer", "resource name: ", keyValueData.Name)
+		if !controllerutil.ContainsFinalizer(&keyValueData, r.FinalizerName) {
+			controllerutil.AddFinalizer(&keyValueData, r.FinalizerName)
+		}
+	} else {
+		logger.Info("delete corresponding data before resource deletion",
+			"resource name: ", keyValueData.Name, "time: ", time.Now().String())
+		if controllerutil.ContainsFinalizer(&keyValueData, r.FinalizerName) {
+			_, _, _ = r.createRequests(ctx, keyValueData.Spec.Data, http.MethodDelete, http.StatusNoContent)
+			controllerutil.RemoveFinalizer(&keyValueData, r.FinalizerName)
+			if err := r.Update(ctx, &keyValueData); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	if len(keyValueData.Status.Conditions) != 0 {
+		var toRemove = make(kvdv1beta1.Data)
+		for _, c := range keyValueData.Status.Conditions {
+			if _, ok := keyValueData.Spec.Data[c.Key]; !ok {
+				toRemove[c.Key] = ""
+				logger.Info("key to delete in update", "key: ", c.Key)
+			}
+		}
+		_, _, _ = r.createRequests(ctx, toRemove,
+			http.MethodDelete, http.StatusNoContent)
+	}
+
+	conditions, successSends, failedSends := r.createRequests(ctx, keyValueData.Spec.Data,
+		http.MethodPost, http.StatusCreated)
+
+	sort.Slice(conditions, func(i, j int) bool {
+		return conditions[i].Key < conditions[j].Key
+	})
+
+	keyValueData.Status.Conditions = conditions
+	keyValueData.Status.FailedSends = &failedSends
+	keyValueData.Status.SuccessSends = &successSends
+	err := r.Client.Status().Update(ctx, &keyValueData)
+	logger.Info("updated status", "resource name: ", keyValueData.Name)
+	return ctrl.Result{}, err
+}
+
+func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kvdv1beta1.Data,
+	method string, expectedStatusCode int) ([]*kvdv1beta1.Condition, int32, int32) {
+	logger := log.FromContext(ctx)
 	var requestStatuses = make([]*kvdv1beta1.Condition, len(entities))
 	var successSends int32
 	var failedSends int32
@@ -87,18 +138,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 			Key:    k,
 			Entity: e,
 		}
-		if len(k) == 0 || len(e) == 0 {
-			logger.Error(fmt.Errorf("empty key or value"), "can not marshall req data")
-			requestStatuses[i] = &kvdv1beta1.Condition{
-				Key:    k,
-				Type:   kvdv1beta1.FailedType,
-				Status: kvdv1beta1.FailedStatus,
-				Reason: "empty key or value",
-			}
-			i++
-			failedSends++
-			continue
-		}
+		logger.Info("request key", "key: ", k)
 		marshalRequestData, err := json.Marshal(reqData)
 		if err != nil {
 			logger.Error(err, "can not marshall req data")
@@ -113,8 +153,9 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 			failedSends++
 			continue
 		}
+		logger.Info("marshalled resource", "key: ", k, "time: ", time.Now().String())
 
-		postRequest, err := http.NewRequest(http.MethodPost, r.ServerURL,
+		postRequest, err := http.NewRequest(method, r.ServerURL,
 			bytes.NewBuffer(marshalRequestData))
 		if err != nil && err != io.EOF {
 			logger.Error(err, "can not create http request")
@@ -144,9 +185,10 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 			failedSends++
 			continue
 		}
+		logger.Info("sent request to server", "key: ", k, "time: ", time.Now().String())
 		postRequest.Body.Close()
 
-		if response.StatusCode != http.StatusCreated {
+		if response.StatusCode != expectedStatusCode {
 			var b []byte
 			var reason string
 			_, err = response.Body.Read(b)
@@ -155,7 +197,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 			}
 			logger.Error(fmt.Errorf("incorrect status code"), "server sent unexpected response",
 				"expected status code", http.StatusCreated,
-				"got", response.StatusCode, "body data", string(b))
+				"got", response.StatusCode, "body data", string(b), "key: ", k)
 
 			m := string(b)
 			if len(b) == 0 {
@@ -183,20 +225,10 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 		}
 		i++
 		successSends++
+		logger.Info("send value to server successfully",
+			"key: ", k, "time: ", time.Now().String())
 	}
-
-	sort.Slice(requestStatuses, func(i, j int) bool {
-		return requestStatuses[i].Key < requestStatuses[j].Key
-	})
-
-	keyValueData.Status.Conditions = requestStatuses
-	keyValueData.Status.FailedSends = &failedSends
-	keyValueData.Status.SuccessSends = &successSends
-	err := r.Client.Status().Update(ctx, &keyValueData)
-	if err != nil {
-		logger.Error(err, "can not update status", "resource name:", keyValueData.Name)
-	}
-	return ctrl.Result{}, err
+	return requestStatuses, successSends, failedSends
 }
 
 // SetupWithManager sets up the controller with the Manager. With GenerationChanged predicate into this manages.

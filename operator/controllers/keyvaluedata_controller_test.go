@@ -86,6 +86,106 @@ var _ = Describe("KeyValueData controller", func() {
 			}))
 		})
 
+		It("Delete with Finalizer with Finalizers", func() {
+			currentTime := time.Now()
+			keyValueData := &v1beta1.KeyValueData{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KeyValueData",
+					APIVersion: "key-value.teamdev.com/v1beta1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              KeyValueDataName,
+					Namespace:         KeyValueDataNamespace,
+					Finalizers:        []string{"kubernetes"},
+					DeletionTimestamp: &metav1.Time{Time: currentTime},
+				},
+				Spec: v1beta1.KeyValueDataSpec{
+					Data: map[string]string{
+						"test-key-string": "test-value-string",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, keyValueData)).Should(Succeed())
+
+			keyValueDataLookupKey := types.NamespacedName{Name: KeyValueDataName, Namespace: KeyValueDataNamespace}
+			deletedKeyValueData := v1beta1.KeyValueData{}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
+			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
+			Expect(k8sClient.Get(ctx, keyValueDataLookupKey, &deletedKeyValueData)).Error()
+		})
+
+		It("Should change KeyValueData Status to one Unsuccessful action", func() {
+			By("Creating new KeyValueData unsuccessfully")
+			keyValueData := &v1beta1.KeyValueData{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KeyValueData",
+					APIVersion: "key-value.teamdev.com/v1beta1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      KeyValueDataName,
+					Namespace: KeyValueDataNamespace,
+				},
+				Spec: v1beta1.KeyValueDataSpec{
+					Data: map[string]string{
+						"test-key-string": "test-value-string",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Succeed())
+
+			keyValueDataLookupKey := types.NamespacedName{Name: KeyValueDataName, Namespace: KeyValueDataNamespace}
+			createdKeyValueData := v1beta1.KeyValueData{}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
+			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
+			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
+			Expect(len(createdKeyValueData.Status.Conditions)).To(Equal(len(keyValueData.Spec.Data)))
+			Expect(*createdKeyValueData.Status.Conditions[0]).To(Equal(v1beta1.Condition{
+				Key:            "test-key-string",
+				Type:           v1beta1.FailedType,
+				Status:         v1beta1.FailedStatus,
+				Reason:         "",
+				Message:        "500 Internal Server Error",
+				LastInsertTime: nil,
+			}))
+		})
+
+		It("Delete with Finalizer without Finalizers", func() {
+			currentTime := time.Now()
+			keyValueData := &v1beta1.KeyValueData{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KeyValueData",
+					APIVersion: "key-value.teamdev.com/v1beta1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              KeyValueDataName,
+					Namespace:         KeyValueDataNamespace,
+					DeletionTimestamp: &metav1.Time{Time: currentTime},
+				},
+				Spec: v1beta1.KeyValueDataSpec{
+					Data: map[string]string{
+						"test-key-string": "test-value-string",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, keyValueData)).Should(Succeed())
+
+			keyValueDataLookupKey := types.NamespacedName{Name: KeyValueDataName, Namespace: KeyValueDataNamespace}
+			deletedKeyValueData := v1beta1.KeyValueData{}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
+			Expect(err).NotTo(HaveOccurred(), "failed to callReconcile")
+			Expect(k8sClient.Get(ctx, keyValueDataLookupKey, &deletedKeyValueData)).Error()
+		})
+
 		It("Should change KeyValueData Status to one Unsuccessful action", func() {
 			By("Creating new KeyValueData unsuccessfully")
 			keyValueData := &v1beta1.KeyValueData{
@@ -166,8 +266,8 @@ var _ = Describe("KeyValueData controller", func() {
 				Key:            "",
 				Type:           v1beta1.FailedType,
 				Status:         v1beta1.FailedStatus,
-				Reason:         "empty key or value",
-				Message:        "",
+				Reason:         "",
+				Message:        "500 Internal Server Error",
 				LastInsertTime: nil,
 			}))
 		})
@@ -209,8 +309,8 @@ var _ = Describe("KeyValueData controller", func() {
 				Key:            "test-key-string",
 				Type:           v1beta1.FailedType,
 				Status:         v1beta1.FailedStatus,
-				Reason:         "empty key or value",
-				Message:        "",
+				Reason:         "",
+				Message:        "500 Internal Server Error",
 				LastInsertTime: nil,
 			}))
 		})
