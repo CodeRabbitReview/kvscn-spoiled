@@ -18,11 +18,11 @@ func init() {
 func TestNewStorage(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    resumer
+		input    Resumer
 		expected *Storage
 	}{
 		{
-			name:  "simple creation without resumer",
+			name:  "simple creation without Resumer",
 			input: nil,
 			expected: &Storage{
 				pairs:   make(map[Keyer]Entitier),
@@ -57,14 +57,8 @@ func TestStorage_Put(t *testing.T) {
 				Key:    models.NewKey(nil),
 				Entity: models.NewEntity(nil, nil),
 			},
-			Storage{
-				pairs: make(map[Keyer]Entitier),
-				mu:    &sync.RWMutex{},
-			},
-			Storage{
-				pairs: make(map[Keyer]Entitier),
-				mu:    &sync.RWMutex{},
-			},
+			*NewStorage(nil),
+			*NewStorage(nil),
 			models.ErrNilInput,
 		},
 		{

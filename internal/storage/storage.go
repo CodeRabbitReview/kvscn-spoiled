@@ -53,14 +53,14 @@ func (p Pair) nilEntity() bool {
 type Storage struct {
 	pairs   map[Keyer]Entitier
 	mu      *sync.RWMutex
-	resumer resumer
+	resumer Resumer
 }
 
-type resumer interface {
+type Resumer interface {
 	RecoverData(action, data string, actions recoverer.Actions) error
 }
 
-func NewStorage(r resumer) *Storage {
+func NewStorage(r Resumer) *Storage {
 	return &Storage{
 		pairs:   make(map[Keyer]Entitier),
 		mu:      &sync.RWMutex{},
@@ -127,9 +127,9 @@ func (s *Storage) Delete(key Keyer) error {
 		}
 		if s.resumer != nil {
 			go func() {
+				err := s.resumer.RecoverData("d",
+					fmt.Sprintf(`{"key": %s}`, string(b)), recoverer.DefaultActions)
 				if err != nil {
-					err = s.resumer.RecoverData("d",
-						fmt.Sprintf(`{"key": %s}`, string(b)), recoverer.DefaultActions)
 					zlog.Log.WithName("storage").Error(err, "can not recover data")
 				}
 			}()
