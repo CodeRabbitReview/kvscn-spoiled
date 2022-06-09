@@ -5,7 +5,7 @@ metadata:
   labels:
     type: local
 spec:
-  storageClassName: hostpath
+  storageClassName: manual
   volumeMode: Filesystem
   capacity:
     storage: 2Gi
@@ -19,8 +19,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: storage-pvc
 spec:
-  storageClassName: hostpath
-  volumeName: storage-pv
+  storageClassName: manual
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -55,6 +54,8 @@ spec:
               value: persistence/k8s.key
             - name: K8S_SSL_CERT
               value: persistence/k8s.crt
+            - name: SERVER_URL
+              value: https://localhost:8080
           ports:
             - name: http-server
               containerPort: 8080
@@ -96,5 +97,5 @@ spec:
   ports:
     - name: storage-http
       protocol: TCP
-      port: 8888
+      port: 8080
       targetPort: http-server
