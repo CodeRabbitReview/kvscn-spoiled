@@ -156,7 +156,7 @@ var _ = Describe("KeyValueData controller", func() {
 			Expect(k8sClient.Create(ctx, keyValueData)).ShouldNot(Succeed())
 		})
 
-		It("Update resource with the same key value", func() {
+		It("Update resource with the same key value and the same resource", func() {
 			By("Creating new KeyValueData successfully")
 			keyValueData := &v1beta1.KeyValueData{
 				TypeMeta: metav1.TypeMeta{
@@ -175,7 +175,7 @@ var _ = Describe("KeyValueData controller", func() {
 			}
 
 			Expect(k8sClient.Create(ctx, keyValueData)).Should(Succeed())
-			Expect(k8sClient.Update(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Update(ctx, keyValueData)).Should(Succeed())
 		})
 
 		It("Update resource with the empty value", func() {
