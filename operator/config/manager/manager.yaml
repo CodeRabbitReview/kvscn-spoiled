@@ -70,6 +70,8 @@ spec:
           env:
             - name: CERT_PATH
               value: ./var/share/k8s.crt
+            - name: SERVER_URL
+              value: https://storage-service.default.svc.cluster.local:8080/api/
           volumeMounts:
             - name: controller-volume
               mountPath: /var/share
