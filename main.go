@@ -33,10 +33,15 @@ func main() {
 		zlog.Log.Error(fmt.Errorf("did not find k8s private ssl key variable"), "env variable is not set")
 		os.Exit(1)
 	}
+	serverULR := os.Getenv("SERVER_URL")
+	if len(serverULR) == 0 {
+		zlog.Log.Error(fmt.Errorf("did not find k8s private ssl key variable"), "env variable is not set")
+		os.Exit(1)
+	}
 	zlog.Log.WithName("storage").Info("started", "time", time.Now().String())
 	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile)
 	s := storage.NewStorage(r)
-	server := httpserver.NewHTTPServer(handlers.NewStorage(s), httpserver.KeyCertPaths{
+	server := httpserver.NewHTTPServer(handlers.NewStorage(s), 8080, httpserver.KeyCertPaths{
 		Key:         localKeyPath,
 		Certificate: localCertPath,
 	},
@@ -44,5 +49,6 @@ func main() {
 			Key:         k8sKeyPath,
 			Certificate: k8sCertPath,
 		})
+	server.URL = serverULR
 	server.Run(r)
 }

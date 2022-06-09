@@ -74,6 +74,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	serverURL := os.Getenv("SERVER_URL")
+	if len(serverURL) == 0 {
+		setupLog.Error(fmt.Errorf("server URL env variable did not set"), "you should set it")
+		os.Exit(1)
+	}
+
 	readCertificate := func(certPath string, httpClient *http.Client) error {
 		var t = http.DefaultTransport.(*http.Transport).Clone()
 		t.MaxIdleConns = 20000
@@ -115,10 +121,11 @@ func main() {
 	}
 
 	if err = (&controllers.KeyValueDataReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		HTTPClient: httpClient,
-		ServerURL:  "https://storage-service.default.svc.cluster.local:8888/api/",
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		HTTPClient:    httpClient,
+		ServerURL:     serverURL,
+		FinalizerName: "kubernetes",
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KeyValueData")
 		os.Exit(1)
