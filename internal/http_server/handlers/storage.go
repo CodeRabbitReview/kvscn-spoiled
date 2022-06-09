@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var indexPath = "./internal/http_server/handlers/static/index.gohtml"
+var IndexPath = "./internal/http_server/handlers/static/index.gohtml"
 
 // Storager should implement 4 methods of common operations:
 // getting all data, getting by id, putting new data, deleting
@@ -210,7 +210,7 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	zlog.Log.WithName("http server").Info("key to put", "key: ", pair.Key)
 	err = s.storage.Put(pair)
 	if err != nil {
 		sendResponse(w, response{
@@ -244,6 +244,7 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	zlog.Log.WithName("http server").Info("key to delete", "key: ", pair.Key)
 	err = s.storage.Delete(pair.Key)
 	if err != nil {
 		sendResponse(w, response{
@@ -266,7 +267,7 @@ func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
 	zlog.Log.WithName("http server").Info("user request to html out")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "text/html;charset=utf-8")
-	t, err := template.ParseFiles(indexPath)
+	t, err := template.ParseFiles(IndexPath)
 	if err != nil {
 		zlog.Log.WithName("http server").
 			Error(err, "cannot parse html template")
