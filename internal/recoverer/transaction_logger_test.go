@@ -1,9 +1,10 @@
 //nolint
-package recoverer
+package recoverer_test
 
 import (
 	"fmt"
 	zlog "github.com/mishaprokop4ik/storage/internal/log"
+	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -33,7 +34,7 @@ func TestRecover_RecoverData(t *testing.T) {
 		name          string
 		action        string
 		data          string
-		logger        *TransactionLogger
+		logger        *recoverer.TransactionLogger
 		expectedError error
 		expectedOut   string
 	}{
@@ -41,7 +42,7 @@ func TestRecover_RecoverData(t *testing.T) {
 			name:          "incorrect action",
 			action:        "g",
 			data:          `{"key": {"1": 20},"entity": {"misha": 20}}`,
-			logger:        NewTransactionLogger(file.Name()),
+			logger:        recoverer.NewTransactionLogger(file.Name()),
 			expectedError: fmt.Errorf(`incorrect action type: g; want one of this: [p d]`),
 			expectedOut:   ``,
 		},
@@ -49,7 +50,7 @@ func TestRecover_RecoverData(t *testing.T) {
 			name:          "correct insert",
 			action:        "p",
 			data:          `{"key":{"1": 20},"entity": {"misha": 20}}`,
-			logger:        NewTransactionLogger(file.Name()),
+			logger:        recoverer.NewTransactionLogger(file.Name()),
 			expectedError: nil,
 			expectedOut:   `p{"key":{"1":20},"entity":{"misha":20}}`,
 		},
@@ -57,7 +58,7 @@ func TestRecover_RecoverData(t *testing.T) {
 			name:          "correct delete",
 			action:        "d",
 			data:          `{"key": {"1": 20}`,
-			logger:        NewTransactionLogger(file.Name()),
+			logger:        recoverer.NewTransactionLogger(file.Name()),
 			expectedError: nil,
 			expectedOut:   `p{"key":{"1":20},"entity":{"misha":20}}d{"key":{"1":20}`,
 		},
@@ -65,7 +66,7 @@ func TestRecover_RecoverData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.logger.RecoverData(tt.action, tt.data, DefaultActions)
+			err := tt.logger.RecoverData(tt.action, tt.data, recoverer.DefaultActions)
 			if !reflect.DeepEqual(tt.expectedError, err) {
 				t.Errorf("expected error: %v; got: %v", tt.expectedError, err)
 			}
@@ -123,7 +124,7 @@ func TestRecover_SendRecovered(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 	}))
 
-	transactionLogger := NewTransactionLogger(f.Name())
+	transactionLogger := recoverer.NewTransactionLogger(f.Name())
 	port := strings.Split(server.URL, ":")[2]
 	transactionLogger.SendRecovered(":" + port)
 }

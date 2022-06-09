@@ -1,8 +1,9 @@
 //nolint
-package handlers
+package handlers_test
 
 import (
 	"bytes"
+	"github.com/mishaprokop4ik/storage/internal/http_server/handlers"
 	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
@@ -20,7 +21,7 @@ func init() {
 
 // changeIndexPath only for test usage
 func changeIndexPath(p string) {
-	indexPath = p
+	handlers.IndexPath = p
 }
 
 func TestServeHTTP(t *testing.T) {
@@ -151,7 +152,7 @@ func TestServeHTTP(t *testing.T) {
 		},
 	}
 	s := storage.NewStorage(nil)
-	storage := NewStorage(s)
+	storage := handlers.NewStorage(s)
 
 	for _, tt := range tests {
 		req := httptest.NewRequest(tt.method, tt.url, tt.body)
@@ -171,7 +172,7 @@ func TestServeHTTP(t *testing.T) {
 
 func TestGetAllInEmptyStorage(t *testing.T) {
 	s := storage.NewStorage(nil)
-	storage := NewStorage(s)
+	storage := handlers.NewStorage(s)
 	tests := []struct {
 		name               string
 		expectedBody       string
@@ -219,7 +220,7 @@ func TestGetAllWithOneObjectInStorage(t *testing.T) {
 		t.Error(err)
 	}
 
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	tests := []struct {
 		name               string
 		expectedBody       string
@@ -281,7 +282,7 @@ func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 		t.Error(err)
 	}
 
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	tests := []struct {
 		name               string
 		expectedBody       string
@@ -313,7 +314,7 @@ func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 func TestPut(t *testing.T) {
 	s := storage.NewStorage(nil)
 
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	tests := []struct {
 		name               string
 		input              *bytes.Buffer
@@ -373,7 +374,7 @@ func TestPut(t *testing.T) {
 
 func TestGetFromEmptyStorage(t *testing.T) {
 	s := storage.NewStorage(nil)
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	tests := []struct {
 		name               string
 		expectedStatusCode int
@@ -431,7 +432,7 @@ func TestGet(t *testing.T) {
 		Key:    models.NewKey("developer"),
 		Entity: e,
 	})
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	tests := []struct {
 		name               string
 		expectedStatusCode int
@@ -495,7 +496,7 @@ func TestDelete(t *testing.T) {
 		Key:    models.NewKey("developer"),
 		Entity: e,
 	})
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	tests := []struct {
 		name               string
 		expectedStatusCode int
@@ -543,7 +544,7 @@ func TestDelete(t *testing.T) {
 
 func TestOutHTMLWithoutData(t *testing.T) {
 	s := storage.NewStorage(nil)
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	changeIndexPath("static/index.gohtml")
 	tests := []struct {
 		name        string
@@ -632,7 +633,7 @@ func TestOutHTMLWithOneData(t *testing.T) {
 		Key:    models.NewKey("person"),
 		Entity: e,
 	})
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	changeIndexPath("static/index.gohtml")
 	tests := []struct {
 		name        string
@@ -764,7 +765,7 @@ func TestOutHTMLWithManyData(t *testing.T) {
 		Key:    models.NewKey("teacher"),
 		Entity: e,
 	})
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	changeIndexPath("static/index.gohtml")
 	tests := []struct {
 		name        string
@@ -857,7 +858,7 @@ func TestOutHTMLWithManyData(t *testing.T) {
 
 func TestOutHTMLEmptyHTMLPath(t *testing.T) {
 	s := storage.NewStorage(nil)
-	storageServer := NewStorage(s)
+	storageServer := handlers.NewStorage(s)
 	changeIndexPath("")
 	tests := []struct {
 		name        string
