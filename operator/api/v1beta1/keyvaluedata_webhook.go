@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"context"
 	"errors"
+	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +32,6 @@ var keyvaluedatalog = logf.Log.WithName("keyvaluedata-resource")
 var c client.Client
 var namespace = "default"
 
-var ErrExistingKey = errors.New("this key already exists")
 var ErrEmptyData = errors.New("empty data field")
 var ErrEmptyKeyOrValue = errors.New("empty key or value")
 
@@ -78,20 +78,20 @@ func (r *KeyValueData) ValidateCreate() error {
 		}
 	}
 	for _, keyValueData := range createdResources.Items {
-		if ok := r.containsAny(keyValueData.Spec.Data); ok {
-			return ErrExistingKey
+		if k, ok := r.containsAny(keyValueData.Spec.Data); ok {
+			return fmt.Errorf("key: %s, err : %s", k, "this key already exists")
 		}
 	}
 	return nil
 }
 
-func (r *KeyValueData) containsAny(d Data) bool {
+func (r *KeyValueData) containsAny(d Data) (string, bool) {
 	for k := range d {
 		if _, ok := r.Spec.Data[k]; ok {
-			return true
+			return k, true
 		}
 	}
-	return false
+	return "", false
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -113,8 +113,10 @@ func (r *KeyValueData) ValidateUpdate(old runtime.Object) error {
 		return ErrEmptyData
 	}
 	for _, keyValueData := range createdResources.Items {
-		if ok := r.containsAny(keyValueData.Spec.Data); ok {
-			return ErrExistingKey
+		if keyValueData.Name != r.Name {
+			if k, ok := r.containsAny(keyValueData.Spec.Data); ok {
+				return fmt.Errorf("key: %s, err : %s", k, "this key already exists")
+			}
 		}
 	}
 	return nil
