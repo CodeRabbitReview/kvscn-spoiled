@@ -65,6 +65,7 @@ var _ = BeforeSuite(func() {
 	reconciler.ServerURL = testServer.URL
 	reconciler.Scheme = scheme.Scheme
 	reconciler.HTTPClient = &http.Client{}
+	reconciler.FinalizerName = "kubernetes"
 }, 60)
 
 var _ = AfterSuite(func() {
