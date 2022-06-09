@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"net/http"
 	"os"
@@ -18,9 +19,9 @@ import (
 // Handler is an interface http.Handler
 // it responds to an HTTP request
 type HTTPServer struct {
-	server   *http.Server
-	certPath string
-	keyPath  string
+	server             *http.Server
+	KeyAndCertificates []KeyCertPaths
+	URL                string
 }
 
 type KeyCertPaths struct {
@@ -29,7 +30,7 @@ type KeyCertPaths struct {
 }
 
 // NewHTTPServer is a constructor of HTTPServer
-func NewHTTPServer(h http.Handler, certPaths ...KeyCertPaths) *HTTPServer {
+func NewHTTPServer(h http.Handler, port int, certPaths ...KeyCertPaths) *HTTPServer {
 	cfg := &tls.Config{
 		MinVersion:       tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
@@ -49,20 +50,23 @@ func NewHTTPServer(h http.Handler, certPaths ...KeyCertPaths) *HTTPServer {
 		}
 		cfg.Certificates = append(cfg.Certificates, pair)
 	}
-	return &HTTPServer{server: &http.Server{
-		Addr:           ":8080",
-		Handler:        h,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   60 * time.Second,
-		IdleTimeout:    10 * time.Second,
-		MaxHeaderBytes: 0,
-		TLSConfig:      cfg,
-		TLSNextProto:   make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
-	}}
+	return &HTTPServer{
+		server: &http.Server{
+			Addr:           fmt.Sprintf(":%d", port),
+			Handler:        h,
+			ReadTimeout:    10 * time.Second,
+			WriteTimeout:   60 * time.Second,
+			IdleTimeout:    10 * time.Second,
+			MaxHeaderBytes: 0,
+			TLSConfig:      cfg,
+			TLSNextProto:   make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
+		},
+		KeyAndCertificates: certPaths,
+	}
 }
 
 type resumer interface {
-	SendRecovered(addr string)
+	SendRecovered(url string, certificates ...string)
 }
 
 // Run runs https server and take recovered data and send it
@@ -70,14 +74,19 @@ type resumer interface {
 // Run catch system signal and display it
 func (s *HTTPServer) Run(r resumer) {
 	go func() {
-		if err := s.server.ListenAndServeTLS(s.certPath,
-			s.keyPath); err != nil {
+		if err := s.server.ListenAndServeTLS("",
+			""); err != nil {
 			zlog.Log.Error(err, "can not start https server")
 			return
 		}
 	}()
-
-	go r.SendRecovered(s.server.Addr)
+	go func() {
+		var certificates = make([]string, len(s.KeyAndCertificates))
+		for i := 0; i < len(s.KeyAndCertificates); i++ {
+			certificates[i] = s.KeyAndCertificates[i].Certificate
+		}
+		r.SendRecovered(s.URL, certificates...)
+	}()
 	zlog.Log.Info("server is running", "on", s.server.Addr)
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, os.Interrupt)
