@@ -156,7 +156,7 @@ func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kv
 			failedSends++
 			continue
 		}
-		logger.Info("marshalled resource", "key: ", k, "time: ", time.Now().String())
+		logger.Info("marshaled resource", "key: ", k, "time: ", time.Now().String())
 
 		request, err := http.NewRequest(method, r.ServerURL,
 			bytes.NewBuffer(marshaledRequestData))
