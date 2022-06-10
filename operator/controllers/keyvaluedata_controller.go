@@ -142,7 +142,7 @@ func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kv
 			Entity: e,
 		}
 		logger.Info("request key", "key: ", k)
-		marshalledRequestData, err := json.Marshal(requestData)
+		marshaledRequestData, err := json.Marshal(requestData)
 		if err != nil {
 			logger.Error(err, "can not marshall req data")
 			requestStatuses[i] = &kvdv1beta1.Condition{
@@ -159,7 +159,7 @@ func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kv
 		logger.Info("marshalled resource", "key: ", k, "time: ", time.Now().String())
 
 		request, err := http.NewRequest(method, r.ServerURL,
-			bytes.NewBuffer(marshalledRequestData))
+			bytes.NewBuffer(marshaledRequestData))
 		if err != nil && err != io.EOF {
 			logger.Error(err, "can not create http request")
 			logger.Error(err, "can not read req data to http request")

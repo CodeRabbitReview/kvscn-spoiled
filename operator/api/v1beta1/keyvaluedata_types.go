@@ -36,8 +36,8 @@ type Data map[string]string
 type Type string
 
 const (
-	AddedType  = "Added"
-	FailedType = "Failed"
+	AddedType  Type = "Added"
+	FailedType Type = "Failed"
 )
 
 // Status describes is data sent to the server.
@@ -46,8 +46,8 @@ const (
 type Status string
 
 const (
-	SuccessStatus = "TRUE"
-	FailedStatus  = "FALSE"
+	SuccessStatus Status = "TRUE"
+	FailedStatus  Status = "FALSE"
 )
 
 // Condition describes information about sent data.
