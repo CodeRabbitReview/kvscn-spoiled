@@ -53,7 +53,9 @@ var _ = Describe("KeyValueData controller", func() {
 			}
 
 			Expect(k8sClient.Create(ctx, keyValueData)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Not(Succeed()),
+				ContainSubstring("key: test-key-string, err : this key already exists"))
+
 		})
 
 		It("Create resource with the not the same keys value", func() {
@@ -113,7 +115,8 @@ var _ = Describe("KeyValueData controller", func() {
 				},
 			}
 
-			Expect(k8sClient.Create(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Not(Succeed()),
+				ContainSubstring(`"empty key or value"`))
 		})
 
 		It("Create resource with the empty key", func() {
@@ -134,7 +137,8 @@ var _ = Describe("KeyValueData controller", func() {
 				},
 			}
 
-			Expect(k8sClient.Create(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Not(Succeed()),
+				ContainSubstring("empty key or value"))
 		})
 
 		It("Create resource with the empty data", func() {
@@ -153,7 +157,8 @@ var _ = Describe("KeyValueData controller", func() {
 				},
 			}
 
-			Expect(k8sClient.Create(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Not(Succeed()),
+				ContainSubstring("empty data field"))
 		})
 
 		It("Update resource with the same key value and the same resource", func() {
@@ -201,7 +206,8 @@ var _ = Describe("KeyValueData controller", func() {
 					"test-key-string": "",
 				},
 			}
-			Expect(k8sClient.Update(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Update(ctx, keyValueData)).Should(Not(Succeed()),
+				ContainSubstring("empty key or value"))
 		})
 
 		It("Update resource with the empty key", func() {
@@ -228,7 +234,8 @@ var _ = Describe("KeyValueData controller", func() {
 					"": "test-value-string",
 				},
 			}
-			Expect(k8sClient.Update(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Update(ctx, keyValueData)).Should(Not(Succeed()),
+				ContainSubstring("empty key or value"))
 		})
 
 		It("Update resource with the empty data", func() {
@@ -253,7 +260,8 @@ var _ = Describe("KeyValueData controller", func() {
 			keyValueData.Spec = v1beta1.KeyValueDataSpec{
 				Data: map[string]string{},
 			}
-			Expect(k8sClient.Update(ctx, keyValueData)).ShouldNot(Succeed())
+			Expect(k8sClient.Update(ctx, keyValueData)).Should(Not(Succeed()),
+				ContainSubstring("empty data field"))
 		})
 
 		It("Update resource successfully", func() {
