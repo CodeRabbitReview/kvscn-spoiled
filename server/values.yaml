@@ -1,0 +1,101 @@
+replicaCount: 1
+
+image:
+  repository: miprokop/storage_server
+  pullPolicy: IfNotPresent
+  tag: "v2"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "kvs-service"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+portName: http-server
+port: 8080
+
+volumeName: storage-volume
+mountPath: /root/persistence
+
+envVars:
+  - name: LOCAL_SSL_KEY
+    value: persistence/localhost.pem
+  - name: LOCAL_SSL_CERT
+    value: persistence/localhost-key.pem
+  - name: K8S_SSL_KEY
+    value: persistence/k8s.key
+  - name: K8S_SSL_CERT
+    value: persistence/k8s.crt
+  - name: SERVER_URL
+    value: https://localhost:8080
+
+service:
+  type: ClusterIP
+  protocol: TCP
+  port: 80
+  portName: kvs-http
+
+servers:
+  - name: storage-http
+    protocol: TCP
+    port: 8080
+    targetPort: http-server
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 500Mi
+  requests:
+    cpu: 100m
+    memory: 200Mi
+
+autoscaling:
+  hpaName: kvs-hpa
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+persistenceVolume:
+  name: kvs-pv
+  capacity: 2Gi
+  volumeMode: Filesystem
+  accessModes: ReadWriteOnce
+  type: local
+  storageClassName: manual
+  hostPath: /Users/prokop/Programming/timdev/storage/persistence
+
+persistenceVolumeClaim:
+  name: kvs-pvc
+  storageClassName: manual
+  mode: Filesystem
+  accessModes: ReadWriteOnce
+  storage: 1Gi
+
+
