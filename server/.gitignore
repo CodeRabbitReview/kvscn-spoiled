@@ -8,7 +8,7 @@ storage.iml
 file.txt
 persistence/recovered
 persistence/storage.json
-/internal/storage/storage.json
+/server/internal/storage/storage.json
 storage.json
 data.json
 # Ignore Gradle project-specific cache directory

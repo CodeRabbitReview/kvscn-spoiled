@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	zlog.Init("persistence/storage.json", "stderr")
+	zlog.Init("./../persistence/storage.json", "stderr")
 	localCertPath := os.Getenv("LOCAL_SSL_KEY")
 	if len(localCertPath) == 0 {
 		zlog.Log.Error(fmt.Errorf("did not find local ssl certificate variable"), "env variable is not set")

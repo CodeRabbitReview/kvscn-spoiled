@@ -4,7 +4,7 @@ FROM golang:1.18-alpine as builder
 ENV GO111MODULE=on
 
 WORKDIR /storage
-COPY . .
+COPY .. .
 RUN apk --no-cache add git alpine-sdk build-base gcc
 RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -o storage main.go
