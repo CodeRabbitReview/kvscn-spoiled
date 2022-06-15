@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("KeyValueData controller", func() {
+var _ = Describe("KeyValueData webhook", func() {
 	Context("Inside of a new namespace", func() {
 		const (
 			KeyValueDataName      = "test-keyvaluedata"

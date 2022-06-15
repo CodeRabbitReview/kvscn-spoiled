@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	zlog "github.com/mishaprokop4ik/storage/internal/log"
-	"github.com/mishaprokop4ik/storage/internal/models"
+	models2 "github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"io/ioutil"
 	"net/http"
@@ -65,12 +65,12 @@ func getPairFromBody(r *http.Request) (storage.Pair, error) {
 	if err != nil {
 		return storage.Pair{}, err
 	}
-	e, err := models.NewClearEntity(p.Entity, bodyBytes)
+	e, err := models2.NewClearEntity(p.Entity, bodyBytes)
 	if err != nil {
 		return storage.Pair{}, err
 	}
 	return storage.Pair{
-		Key:    models.NewKey(p.Key),
+		Key:    models2.NewKey(p.Key),
 		Entity: e,
 	}, nil
 }

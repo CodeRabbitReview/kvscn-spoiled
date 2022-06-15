@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"github.com/mishaprokop4ik/storage/internal/http_server/handlers"
 	zlog "github.com/mishaprokop4ik/storage/internal/log"
-	"github.com/mishaprokop4ik/storage/internal/models"
+	models2 "github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"io"
 	"net/http"
@@ -203,7 +203,7 @@ func TestGetAllInEmptyStorage(t *testing.T) {
 
 func TestGetAllWithOneObjectInStorage(t *testing.T) {
 	s := storage.NewStorage(nil)
-	e, err := models.NewClearEntity(20, []byte(`{
+	e, err := models2.NewClearEntity(20, []byte(`{
     "key":"misha",
     "entity": {
 		"misha": 20
@@ -214,7 +214,7 @@ func TestGetAllWithOneObjectInStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := s.Put(storage.Pair{
-		Key:    models.NewKey("misha"),
+		Key:    models2.NewKey("misha"),
 		Entity: e,
 	}); err != nil {
 		t.Error(err)
@@ -251,7 +251,7 @@ func TestGetAllWithOneObjectInStorage(t *testing.T) {
 
 func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 	s := storage.NewStorage(nil)
-	e, err := models.NewClearEntity(20, []byte(`{
+	e, err := models2.NewClearEntity(20, []byte(`{
     "key":"misha",
     "entity": {
 		"misha": 20
@@ -260,13 +260,13 @@ func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := s.Put(storage.Pair{
-		Key:    models.NewKey("misha"),
+		Key:    models2.NewKey("misha"),
 		Entity: e,
 	}); err != nil {
 		t.Error(err)
 	}
 
-	e, err = models.NewClearEntity(20, []byte(`{
+	e, err = models2.NewClearEntity(20, []byte(`{
     "key":"dasha",
     "entity": {
 		"dasha": 20
@@ -276,7 +276,7 @@ func TestGetAllWithManyObjectsInStorage(t *testing.T) {
 	}
 
 	if err := s.Put(storage.Pair{
-		Key:    models.NewKey("dasha"),
+		Key:    models2.NewKey("dasha"),
 		Entity: e,
 	}); err != nil {
 		t.Error(err)
@@ -411,7 +411,7 @@ func TestGetFromEmptyStorage(t *testing.T) {
 func TestGet(t *testing.T) {
 	s := storage.NewStorage(nil)
 
-	e, err := models.NewClearEntity(struct {
+	e, err := models2.NewClearEntity(struct {
 		name string
 		lvl  string
 	}{
@@ -429,7 +429,7 @@ func TestGet(t *testing.T) {
 	}
 
 	s.Put(storage.Pair{
-		Key:    models.NewKey("developer"),
+		Key:    models2.NewKey("developer"),
 		Entity: e,
 	})
 	storageServer := handlers.NewStorage(s)
@@ -475,7 +475,7 @@ func TestGet(t *testing.T) {
 func TestDelete(t *testing.T) {
 	s := storage.NewStorage(nil)
 
-	e, err := models.NewClearEntity(struct {
+	e, err := models2.NewClearEntity(struct {
 		name string
 		lvl  string
 	}{
@@ -493,7 +493,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	s.Put(storage.Pair{
-		Key:    models.NewKey("developer"),
+		Key:    models2.NewKey("developer"),
 		Entity: e,
 	})
 	storageServer := handlers.NewStorage(s)
@@ -615,7 +615,7 @@ func TestOutHTMLWithoutData(t *testing.T) {
 func TestOutHTMLWithOneData(t *testing.T) {
 	s := storage.NewStorage(nil)
 
-	e, err := models.NewClearEntity(map[string]interface{}{
+	e, err := models2.NewClearEntity(map[string]interface{}{
 		"age":  20,
 		"name": "misha",
 	}, []byte(`{
@@ -630,7 +630,7 @@ func TestOutHTMLWithOneData(t *testing.T) {
 	}
 
 	s.Put(storage.Pair{
-		Key:    models.NewKey("person"),
+		Key:    models2.NewKey("person"),
 		Entity: e,
 	})
 	storageServer := handlers.NewStorage(s)
@@ -718,7 +718,7 @@ func TestOutHTMLWithOneData(t *testing.T) {
 func TestOutHTMLWithManyData(t *testing.T) {
 	s := storage.NewStorage(nil)
 
-	e, err := models.NewClearEntity(map[string][]map[string]string{
+	e, err := models2.NewClearEntity(map[string][]map[string]string{
 		"students": {
 			map[string]string{
 				"name": "misha",
@@ -746,11 +746,11 @@ func TestOutHTMLWithManyData(t *testing.T) {
 	}
 
 	s.Put(storage.Pair{
-		Key:    models.NewKey("students"),
+		Key:    models2.NewKey("students"),
 		Entity: e,
 	})
 
-	e, err = models.NewClearEntity(map[string]string{
+	e, err = models2.NewClearEntity(map[string]string{
 		"name": "sergei",
 	}, []byte(`{
     "key": "teacher",
@@ -762,7 +762,7 @@ func TestOutHTMLWithManyData(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Put(storage.Pair{
-		Key:    models.NewKey("teacher"),
+		Key:    models2.NewKey("teacher"),
 		Entity: e,
 	})
 	storageServer := handlers.NewStorage(s)
