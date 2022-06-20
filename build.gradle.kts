@@ -203,21 +203,21 @@ tasks.register("createChart") {
     }
 }
 
-//tasks.register("installChart") {
-//    group = "helm"
-//    description = "installs chart on Kubernetes cluster"
-//    doFirst {
-//        exec {
-//            commandLine = listOf("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml")
-//        }
-//    }
-//    doLast {
-//        Thread.sleep(5000)
-//        exec {
-//            commandLine = listOf("helm", "install", "kv-bundle", "kv-bundle-${chartVersion}.tgz")
-//        }
-//    }
-//}
+tasks.register("installChart") {
+    group = "helm"
+    description = "installs chart on Kubernetes cluster"
+    doFirst {
+        exec {
+            commandLine = listOf("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml")
+        }
+    }
+    doLast {
+        Thread.sleep(5000)
+        exec {
+            commandLine = listOf("helm", "install", "kv-bundle", "kv-bundle-${chartVersion}.tgz")
+        }
+    }
+}
 
 tasks.register("uninstallChart") {
     group = "helm"
