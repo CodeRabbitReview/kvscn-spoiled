@@ -1,13 +1,12 @@
 replicaCount: 1
 
-image:
-  repository: miprokop/storage_server
-  pullPolicy: IfNotPresent
-  tag: "v2"
-
-imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
+image:
+  name: miprokop/storage_server
+  version: v2
+  imagePullPolicy: IfNotPresent
 
 serviceAccount:
   create: true
@@ -98,4 +97,4 @@ persistenceVolumeClaim:
   accessModes: ReadWriteOnce
   storage: 1Gi
 
-
+namespace: default

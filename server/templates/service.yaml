@@ -1,7 +1,8 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "kv-server.serviceAccountName" . }}
+  name: storage-service
+  namespace: {{.Values.namespace}}
 spec:
   type: {{ default "ClusterIP" .Values.service.type }}
   selector:

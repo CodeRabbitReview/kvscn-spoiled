@@ -1,0 +1,78 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: operator-serving-cert
+  namespace: {{.Values.namespace}}
+spec:
+  dnsNames:
+    - operator-webhook-service.{{.Values.namespace}}.svc
+    - operator-webhook-service.{{.Values.namespace}}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: operator-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: operator-selfsigned-issuer
+  namespace: {{.Values.namespace}}
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{.Values.namespace}}/operator-serving-cert
+  name: operator-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: operator-webhook-service
+      namespace: {{.Values.namespace}}
+      path: /mutate-key-value-teamdev-com-v1beta1-keyvaluedata
+  failurePolicy: Fail
+  name: mkeyvaluedata.kb.io
+  rules:
+  - apiGroups:
+    - key-value.teamdev.com
+    apiVersions:
+    - v1beta1
+    operations:{{- range .Values.webhookOperations}}
+      - {{.}}
+    {{- end}}
+    resources:
+    - keyvaluedata
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{.Values.namespace}}/operator-serving-cert
+  name: operator-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: operator-webhook-service
+      namespace: {{.Values.namespace}}
+      path: /validate-key-value-teamdev-com-v1beta1-keyvaluedata
+  failurePolicy: Fail
+  name: vkeyvaluedata.kb.io
+  rules:
+  - apiGroups:
+    - key-value.teamdev.com
+    apiVersions:
+    - v1beta1
+    operations: {{- range .Values.webhookOperations}}
+      - {{.}}
+    {{- end}}
+    resources:
+    - keyvaluedata
+  sideEffects: None

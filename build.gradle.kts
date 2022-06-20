@@ -7,6 +7,7 @@ val port = "8080"
 val k8sTemplatesPath = "templates/"
 val storageDeployManifestFile = "storage.yaml"
 val metricsServerManifestFile = "metrics_server.yaml"
+val chartVersion = "0.1.0"
 
 description = "Storage gradle"
 version = "1.0.0"
@@ -82,6 +83,7 @@ tasks.register("build") {
     description = "Builds binary of project"
     doLast {
         exec {
+            workingDir("server")
             commandLine = listOf("go", "build", "-o", "./${binaryDir}/${binaryName}", "-a", ".")
         }
     }
@@ -92,9 +94,19 @@ tasks.register("test") {
     description = "Runs all tests in project"
     doLast {
         exec {
+            workingDir("server")
             commandLine = listOf("go", "test", "--cover", "./...")
         }
     }
+//    doLast {
+//        exec {
+//            workingDir("operator")
+//        }
+//        exec {
+//            workingDir("operator")
+//            commandLine = listOf("go", "test", "--cover", "./...")
+//        }
+//    }
 }
 
 tasks.register("golint") {
@@ -129,11 +141,11 @@ tasks.register("push") {
 
 tasks.register("testingDone") {
     group = "tests"
-    description = "Runs go tests with coverage report and fail if doesn’t match the low boundary of 75 percent"
+    description = "Runs go tests with coverage report and fail if doesn’t match the low boundary of 70 percent"
     val out = java.io.ByteArrayOutputStream()
     val ps = java.io.PrintStream(out)
     val old = System.out
-    val minPercentage = 75
+    val minPercentage = 70
     System.setOut(ps)
     dependsOn("test")
     doFirst {
@@ -166,6 +178,53 @@ tasks.register("sanityCheck") {
     doLast {
         exec {
             commandLine = listOf("bash", "run.sh")
+        }
+    }
+}
+
+tasks.register("createChart") {
+    group = "helm"
+    description = "creates a Helm chart with all needed resources for the key-value storage"
+    doLast {
+        exec {
+            commandLine = listOf("find", ".", "-name", "kv-bundle*.tgz", "-type", "f", "-delete")
+        }
+    }
+    doLast {
+        exec {
+            workingDir("kv-bundle")
+            commandLine = listOf("helm", "dependency", "update")
+        }
+    }
+    doLast {
+        exec {
+            commandLine = listOf("helm", "package", "kv-bundle")
+        }
+    }
+}
+
+tasks.register("installChart") {
+    group = "helm"
+    description = "installs chart on Kubernetes cluster"
+    doFirst {
+        exec {
+            commandLine = listOf("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml")
+        }
+    }
+    doLast {
+        Thread.sleep(5000)
+        exec {
+            commandLine = listOf("helm", "install", "kv-bundle", "kv-bundle-${chartVersion}.tgz")
+        }
+    }
+}
+
+tasks.register("uninstallChart") {
+    group = "helm"
+    description = "uninstalls chart from Kubernetes cluster"
+    doLast {
+        exec {
+            commandLine = listOf("helm", "uninstall", "kv-bundle")
         }
     }
 }
