@@ -1,0 +1,125 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: operator-leader-election-role
+  namespace: {{.Values.namespace}}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs: {{- range .Values.roleAllVerbs}}
+      - {{.}}
+    {{- end}}
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs: {{- range .Values.roleAllVerbs}}
+      - {{.}}
+    {{- end}}
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: operator-manager-role
+rules:
+  - apiGroups:
+      - key-value.teamdev.com
+    resources:
+      - keyvaluedata
+    verbs: {{- range .Values.roleAllVerbs}}
+      - {{.}}
+    {{- end}}
+  - apiGroups:
+      - key-value.teamdev.com
+    resources:
+      - keyvaluedata/finalizers
+    verbs:{{- range .Values.roleFinalizersVerbs}}
+      - {{.}}
+      {{- end}}
+  - apiGroups:
+      - key-value.teamdev.com
+    resources:
+      - keyvaluedata/status
+    verbs: {{- range .Values.roleStatusVerbs}}
+      - {{.}}
+    {{- end}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: operator-metrics-reader
+rules:
+  - nonResourceURLs:
+      - /metrics
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: operator-proxy-role
+rules:
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs: {{- range .Values.roleTokenreviewsVerbs}}
+      - {{.}}
+      {{- end}}
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs: {{- range .Values.roleSubjectaccessreviewsVerbs}}
+      - {{.}}
+      {{- end}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: operator-leader-election-rolebinding
+  namespace: {{.Values.namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: operator-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: operator-controller-manager
+    namespace: {{.Values.namespace}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: operator-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: operator-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: operator-controller-manager
+    namespace: {{.Values.namespace}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: operator-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: operator-proxy-role
+subjects:
+  - kind: ServiceAccount
+    name: operator-controller-manager
+    namespace: {{.Values.namespace}}

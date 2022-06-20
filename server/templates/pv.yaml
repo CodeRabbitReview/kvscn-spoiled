@@ -4,6 +4,7 @@ metadata:
   name: {{ .Values.persistenceVolume.name }}
   labels:
     type: {{ .Values.persistenceVolume.type }}
+  namespace: {{.Values.namespace}}
 spec:
   storageClassName: {{ .Values.persistenceVolume.storageClassName }}
   volumeMode: {{ .Values.persistenceVolume.volumeMode }}

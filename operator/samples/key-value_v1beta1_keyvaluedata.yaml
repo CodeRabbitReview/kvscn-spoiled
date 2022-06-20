@@ -1,7 +1,7 @@
 apiVersion: key-value.teamdev.com/v1beta1
 kind: KeyValueData
 metadata:
-  name: keyvaluedata-sample2
+  name: keyvaluedata-sample4
 spec:
   data:
-    bla: "bbbbbbbbb12"
+    "123123": "1231234"

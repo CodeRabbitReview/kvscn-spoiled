@@ -4,6 +4,7 @@ metadata:
   name: {{ include "kv-server.fullname" . }}
   labels:
       {{- include "kv-server.labels" . | nindent 4 }}
+  namespace: {{.Values.namespace}}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -18,10 +19,9 @@ spec:
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          image: {{ .Values.image.repository }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          env:
-            {{- range .Values.envVars }}
+          image: {{.Values.image.name}}:{{.Values.image.version}}
+          imagePullPolicy: {{.Values.image.imagePullPolicy}}
+          env: {{- range .Values.envVars }}
             - name: {{ .name }}
               value: {{ .value }}
             {{- end }}

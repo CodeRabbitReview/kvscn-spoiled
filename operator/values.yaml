@@ -1,0 +1,39 @@
+replicaCount: 1
+
+images:
+  rbac:
+    name: gcr.io/kubebuilder/kube-rbac-proxy
+    version: v0.11.0
+  crd:
+    name: miprokop/crd
+    version: v1
+
+webhookOperations:
+  - CREATE
+  - UPDATE
+
+roleAllVerbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+
+roleStatusVerbs:
+  - get
+  - patch
+  - update
+
+roleFinalizersVerbs:
+  - update
+
+roleSubjectaccessreviewsVerbs:
+  - create
+
+roleTokenreviewsVerbs:
+  - create
+
+namespace:
+  default

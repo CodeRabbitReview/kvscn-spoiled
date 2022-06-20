@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	zlog.Init("./../persistence/storage.json", "stderr")
+	zlog.Init("./persistence/storage.json", "stderr")
 	localCertPath := os.Getenv("LOCAL_SSL_KEY")
 	if len(localCertPath) == 0 {
 		zlog.Log.Error(fmt.Errorf("did not find local ssl certificate variable"), "env variable is not set")
@@ -41,10 +41,11 @@ func main() {
 	zlog.Log.WithName("storage").Info("started", "time", time.Now().String())
 	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile)
 	s := storage.NewStorage(r)
-	server := httpserver.NewHTTPServer(handlers.NewStorage(s), 8080, httpserver.KeyCertPaths{
-		Key:         localKeyPath,
-		Certificate: localCertPath,
-	},
+	server := httpserver.NewHTTPServer(handlers.NewStorage(s), 8080,
+		httpserver.KeyCertPaths{
+			Key:         localKeyPath,
+			Certificate: localCertPath,
+		},
 		httpserver.KeyCertPaths{
 			Key:         k8sKeyPath,
 			Certificate: k8sCertPath,

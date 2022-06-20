@@ -1,0 +1,12 @@
+dependencies:
+- name: kv-common
+  repository: file://../kv-common
+  version: 0.1.0
+- name: kv-server
+  repository: file://../server
+  version: 0.1.0
+- name: operator
+  repository: file://../operator
+  version: 0.1.0
+digest: sha256:73ea7681a3e07f6f42b2a5d2c734ae75bb8abb215707a79b972c1d613e00a813
+generated: "2022-06-20T23:22:24.385551+03:00"
