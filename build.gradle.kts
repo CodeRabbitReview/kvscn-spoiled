@@ -211,6 +211,7 @@ tasks.register("installChart") {
             commandLine = listOf("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml")
         }
     }
+
     doLast {
         Thread.sleep(5000)
         exec {
