@@ -7,3 +7,5 @@ kv-bundle-0.1.0.tgz
 /kv-bundle/charts/operator-0.1.0.tgz
 operator/bin
 server/bin
+persistence/storage.json
+persistence/recovered
