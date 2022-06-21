@@ -111,6 +111,13 @@ tasks.register("serverOptimizeDependencies") {
     description = "Removes unused and download dependencies"
     doLast {
         exec {
+            workingDir("operator")
+            commandLine = listOf("go", "mod", "tidy")
+        }
+    }
+    doLast {
+        exec {
+            workingDir("server")
             commandLine = listOf("go", "mod", "tidy")
         }
     }
@@ -121,6 +128,13 @@ tasks.register("staticCheck") {
     description = "Runs staticcheck util"
     doLast {
         exec {
+            workingDir("operator")
+            commandLine = listOf("staticcheck", "-f", "json", "./...")
+        }
+    }
+    doLast {
+        exec {
+            workingDir("server")
             commandLine = listOf("staticcheck", "-f", "json", "./...")
         }
     }
@@ -186,6 +200,13 @@ tasks.register("golint") {
     description = "Runs go lint util"
     doLast {
         exec {
+            workingDir("operator")
+            commandLine = listOf("golangci-lint", "run", "--timeout=5m", "-c", ".golangci.yml")
+        }
+    }
+    doLast {
+        exec {
+            workingDir("server")
             commandLine = listOf("golangci-lint", "run", "--timeout=5m", "-c", ".golangci.yml")
         }
     }
