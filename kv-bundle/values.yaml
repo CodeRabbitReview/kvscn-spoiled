@@ -1,0 +1,4 @@
+kv-server:
+  namespace: default
+operator:
+  namespace: default
