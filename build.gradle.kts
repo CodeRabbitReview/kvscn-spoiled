@@ -2,27 +2,84 @@ import java.lang.Float.parseFloat
 
 val binaryDir = "bin"
 val binaryName = "storage_server"
-val dockerName = "miprokop/storage_server:v2"
+val kvServerDockerName = "miprokop/storage_server:v2"
 val port = "8080"
 val k8sTemplatesPath = "templates/"
-val storageDeployManifestFile = "storage.yaml"
-val metricsServerManifestFile = "metrics_server.yaml"
 val chartVersion = "0.1.0"
+val operatorDockerName = "miprokop/crd:v1"
+val localBIN = ""
+val controllerToolVersion = "v0.8.0"
 
 description = "Storage gradle"
 version = "1.0.0"
 
+tasks.register("operatorDeploy") {
+    group = "deploy"
+    description = ""
+    doLast {
+        exec {
+            workingDir("operator")
+            commandLine = listOf("kubectl", "apply", "-f", k8sTemplatesPath)
+        }
+    }
+}
+
+tasks.register("operatorUndeploy") {
+    group = "deploy"
+    description = ""
+    doLast {
+        exec {
+            exec {
+                workingDir("operator")
+                commandLine = listOf("kubectl", "delete", "-f", k8sTemplatesPath)
+            }
+        }
+    }
+}
+
+tasks.register("controllerGen") {
+    group = "controller"
+    description = "create controller gen binary file into bin dir"
+    doLast {
+        exec {
+            workingDir("operator")
+            environment("GOBIN", "${projectDir.absolutePath}/operator/bin")
+            commandLine = listOf("go", "install", "sigs.k8s.io/controller-tools/cmd/controller-gen@${controllerToolVersion}")
+        }
+    }
+}
+
+tasks.register("manifests") {
+    group = "controller"
+    description = "create controller gen binary file into bin dir"
+    val controllerGen = "${projectDir.absolutePath}/operator/bin/controller-gen"
+    dependsOn("controllerGen")
+    doLast {
+        exec {
+            workingDir("operator")
+            commandLine = listOf(controllerGen, "rbac:roleName=manager-role", "crd", "webhook", "paths=./...", "output:crd:artifacts:config=config/crd/bases")
+        }
+    }
+}
+
 tasks.register("format") {
     group = "Clean code"
     description = "Formats project by go fmt action"
+    doFirst {
+        exec {
+            workingDir("server")
+            commandLine = listOf("go", "fmt", "./...")
+        }
+    }
     doLast {
         exec {
+            workingDir("operator")
             commandLine = listOf("go", "fmt", "./...")
         }
     }
 }
 
-tasks.register("deploy") {
+tasks.register("serverDeploy") {
     group = "k8s"
     description = "Deploys the key-value storage app on the Kubernetes cluster"
     doFirst {
@@ -30,29 +87,26 @@ tasks.register("deploy") {
             commandLine = listOf("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml")
         }
     }
-    doFirst {
-        exec {
-            commandLine = listOf("kubectl", "apply", "-f", "${k8sTemplatesPath}${metricsServerManifestFile}")
-        }
-    }
     doLast {
         exec {
-            commandLine = listOf("kubectl", "apply", "-f", "${k8sTemplatesPath}${storageDeployManifestFile}")
+            workingDir("server")
+            commandLine = listOf("kubectl", "apply", "-f", k8sTemplatesPath)
         }
     }
 }
 
-tasks.register("undeploy") {
+tasks.register("serverUndeploy") {
     group = "k8s"
     description = "Removes the key-value storage app from the Kubernetes cluster"
     doLast {
         exec {
-            commandLine = listOf("kubectl", "delete", "-f", "${k8sTemplatesPath}${storageDeployManifestFile}")
+            workingDir("server")
+            commandLine = listOf("kubectl", "delete", "-f", k8sTemplatesPath)
         }
     }
 }
 
-tasks.register("optimizeDependencies") {
+tasks.register("serverOptimizeDependencies") {
     group = "Clean code"
     description = "Removes unused and download dependencies"
     doLast {
@@ -78,7 +132,7 @@ tasks.register("cleanCode") {
     dependsOn("format", "optimizeDependencies", "staticCheck")
 }
 
-tasks.register("build") {
+tasks.register("serverBuild") {
     group = "build"
     description = "Builds binary of project"
     doLast {
@@ -89,24 +143,42 @@ tasks.register("build") {
     }
 }
 
-tasks.register("test") {
+tasks.register("serverTest") {
     group = "tests"
-    description = "Runs all tests in project"
+    description = "Runs all tests in server dir"
     doLast {
         exec {
             workingDir("server")
             commandLine = listOf("go", "test", "--cover", "./...")
         }
     }
-//    doLast {
-//        exec {
-//            workingDir("operator")
-//        }
-//        exec {
-//            workingDir("operator")
-//            commandLine = listOf("go", "test", "--cover", "./...")
-//        }
-//    }
+}
+
+tasks.register("operatorTest") {
+    group = "tests"
+    description = "Runs all tests in operator dir"
+    val controllerGen = "${projectDir.absolutePath}/operator/bin/controller-gen"
+    dependsOn("manifests")
+    doLast {
+        exec {
+            workingDir("operator")
+            commandLine = listOf(controllerGen, "object:headerFile=hack/boilerplate.go.txt", "paths=./...")
+        }
+    }
+    doLast {
+        exec {
+            workingDir("operator")
+            environment("GOBIN", "${projectDir.absolutePath}/operator/bin")
+            commandLine = listOf("go", "install", "sigs.k8s.io/controller-runtime/tools/setup-envtest@latest")
+        }
+    }
+    doLast {
+        exec {
+            workingDir("operator")
+            environment("KUBEBUILDER_ASSETS", "${projectDir.absolutePath}/operator/1.23.5-darwin-amd64")
+            commandLine = listOf("go", "test", "--cover", "./...")
+        }
+    }
 }
 
 tasks.register("golint") {
@@ -119,38 +191,63 @@ tasks.register("golint") {
     }
 }
 
-tasks.register("dockerBuild") {
+tasks.register("operatorDockerBuild") {
     group = "docker"
-    description = "Builds docker image by Dockerfile"
+    description = "Builds docker operator image by Dockerfile"
     doLast {
         exec {
-            commandLine = listOf("docker", "build", "-t", dockerName, ".")
+            workingDir("operator")
+            commandLine = listOf("docker", "build", "-t", operatorDockerName, ".")
         }
     }
 }
 
-tasks.register("push") {
+tasks.register("serverDockerBuild") {
+    group = "docker"
+    description = "Builds docker server image by Dockerfile"
+    doLast {
+        exec {
+            workingDir("server")
+            commandLine = listOf("docker", "build", "-t", kvServerDockerName, ".")
+        }
+    }
+}
+
+tasks.register("serverDockerPush") {
     group = "docker"
     description = "Pushes the key-value docker image to dockerhub"
     doLast {
         exec {
-            commandLine = listOf("docker", "push",  dockerName)
+            workingDir("server")
+            commandLine = listOf("docker", "push",  kvServerDockerName)
+        }
+    }
+}
+
+tasks.register("operatorDockerPush") {
+    group = "docker"
+    description = "Pushes the key-value docker image to dockerhub"
+    doLast {
+        exec {
+            workingDir("operator")
+            commandLine = listOf("docker", "push",  operatorDockerName)
         }
     }
 }
 
 tasks.register("testingDone") {
     group = "tests"
-    description = "Runs go tests with coverage report and fail if doesn’t match the low boundary of 70 percent"
+    description = "Runs go tests with coverage report and fail if it does not match the low boundary of 70 percent"
     val out = java.io.ByteArrayOutputStream()
     val ps = java.io.PrintStream(out)
     val old = System.out
     val minPercentage = 70
     System.setOut(ps)
-    dependsOn("test")
+    dependsOn("serverTest")
     doFirst {
         System.out.flush()
         System.setOut(old)
+        logger.info(out.toString())
     }
     doLast {
         val resp = out.toString().split("\n")
