@@ -5,3 +5,5 @@ kv-bundle-0.1.0.tgz
 /kv-bundle/charts/kv-common-0.1.0.tgz
 /kv-bundle/charts/kv-server-0.1.0.tgz
 /kv-bundle/charts/operator-0.1.0.tgz
+operator/bin
+server/bin
