@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 timestamps {
     node {
-        def root = tool type: 'go', name: 'Go 1.18.2'
+        def root = tool type: 'go', name: 'Go 1.17.10'
 
         withEnv(["GOROOT=${root}",
          "PATH+GO=${root}/bin",
