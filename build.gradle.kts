@@ -158,7 +158,7 @@ tasks.register("serverTest") {
     doLast {
         exec {
             workingDir("server")
-            commandLine = listOf("go", "test", "--cover", "./...")
+            commandLine = listOf("bash", "test.sh")
         }
     }
 }
@@ -185,7 +185,7 @@ tasks.register("operatorTest") {
         exec {
             workingDir("operator")
             environment("KUBEBUILDER_ASSETS", "${projectDir.absolutePath}/operator/1.23.5-darwin-amd64")
-            commandLine = listOf("go", "test", "--cover", "./...")
+            commandLine = listOf("bash", "test.sh")
         }
     }
 }
@@ -254,19 +254,14 @@ tasks.register("operatorDockerPush") {
 tasks.register("testingDone") {
     group = "tests"
     description = "Runs go tests with coverage report and fail if it does not match the low boundary of 70 percent"
-    val out = java.io.ByteArrayOutputStream()
-    val ps = java.io.PrintStream(out)
-    val old = System.out
     val minPercentage = 70
-    System.setOut(ps)
-    dependsOn("serverTest")
-    doFirst {
-        System.out.flush()
-        System.setOut(old)
-        logger.info(out.toString())
-    }
+    dependsOn("operatorTest", "serverTest")
     doLast {
-        val resp = out.toString().split("\n")
+        val serverInputStream: java.io.InputStream = File("${projectDir.absolutePath}/server/test.out").inputStream()
+        val operatorInputStream: java.io.InputStream = File("${projectDir.absolutePath}/operator/test.out").inputStream()
+        var out = serverInputStream.bufferedReader().use { it.readText() }
+        out += "\n" + operatorInputStream.bufferedReader().use { it.readText() }
+        val resp = out.split("\n")
         for (r in resp) {
             if (!r.contains("[no test files]")) {
                 val t = r.split("coverage: ").last()
@@ -280,6 +275,16 @@ tasks.register("testingDone") {
                         Exception(r))
                 }
             }
+        }
+    }
+    doLast {
+        exec {
+            commandLine = listOf("rm", "-f", "${projectDir.absolutePath}/server/test.out")
+        }
+    }
+    doLast {
+        exec {
+            commandLine = listOf("rm", "-f", "${projectDir.absolutePath}/operator/test.out")
         }
     }
 }
