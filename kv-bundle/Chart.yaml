@@ -11,6 +11,9 @@ dependencies:
   - name: "kv-common"
     version: 0.1.0
     repository: "file://../kv-common"
+  - name: "cert-manager"
+    version: v1.8.0
+    repository: https://charts.jetstack.io
   - name: "kv-server"
     version: 0.1.0
     repository: "file://../server"
