@@ -121,6 +121,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 				keyValueData.Status.Conditions[len(keyValueData.Status.Conditions)-1] = nil
 				keyValueData.Status.Conditions = keyValueData.Status.Conditions[:len(keyValueData.Status.Conditions)-1]
 			} else {
+				logger.Info("key to update in update", "key: ", c.Key)
 				condition, success, failed := r.createRequests(ctx, DataRequest{
 					Key:    c.Key,
 					Entity: v,

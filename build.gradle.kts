@@ -158,7 +158,7 @@ tasks.register("serverTest") {
     doLast {
         exec {
             workingDir("server")
-            commandLine = listOf("bash", "test.sh")
+            commandLine = listOf("go", "test", "--cover", "./...")
         }
     }
 }
@@ -166,26 +166,10 @@ tasks.register("serverTest") {
 tasks.register("operatorTest") {
     group = "tests"
     description = "Runs all tests in operator dir"
-    val controllerGen = "${projectDir.absolutePath}/operator/bin/controller-gen"
-    dependsOn("manifests")
     doLast {
         exec {
             workingDir("operator")
-            commandLine = listOf(controllerGen, "object:headerFile=hack/boilerplate.go.txt", "paths=./...")
-        }
-    }
-    doLast {
-        exec {
-            workingDir("operator")
-            environment("GOBIN", "${projectDir.absolutePath}/operator/bin")
-            commandLine = listOf("go", "install", "sigs.k8s.io/controller-runtime/tools/setup-envtest@latest")
-        }
-    }
-    doLast {
-        exec {
-            workingDir("operator")
-            environment("KUBEBUILDER_ASSETS", "${projectDir.absolutePath}/operator/1.23.5-darwin-amd64")
-            commandLine = listOf("bash", "test.sh")
+            commandLine = listOf("go", "test", "--cover", "./...")
         }
     }
 }
@@ -251,17 +235,23 @@ tasks.register("operatorDockerPush") {
     }
 }
 
+
 tasks.register("testingDone") {
     group = "tests"
-    description = "Runs go tests with coverage report and fail if it does not match the low boundary of 70 percent"
+    description = "Runs go tests with coverage report and fail if it doesn’t match the low boundary of 75 percent"
+    val out = java.io.ByteArrayOutputStream()
+    val ps = java.io.PrintStream(out)
+    val old = System.out
     val minPercentage = 70
-    dependsOn("operatorTest", "serverTest")
+    System.setOut(ps)
+    dependsOn( "operatorTest", "serverTest")
+    doFirst {
+        System.out.flush()
+        System.setOut(old)
+        println(out.toString())
+    }
     doLast {
-        val serverInputStream: java.io.InputStream = File("${projectDir.absolutePath}/server/test.out").inputStream()
-        val operatorInputStream: java.io.InputStream = File("${projectDir.absolutePath}/operator/test.out").inputStream()
-        var out = serverInputStream.bufferedReader().use { it.readText() }
-        out += "\n" + operatorInputStream.bufferedReader().use { it.readText() }
-        val resp = out.split("\n")
+        val resp = out.toString().split("\n")
         for (r in resp) {
             if (!r.contains("[no test files]")) {
                 val t = r.split("coverage: ").last()
@@ -275,16 +265,6 @@ tasks.register("testingDone") {
                         Exception(r))
                 }
             }
-        }
-    }
-    doLast {
-        exec {
-            commandLine = listOf("rm", "-f", "${projectDir.absolutePath}/server/test.out")
-        }
-    }
-    doLast {
-        exec {
-            commandLine = listOf("rm", "-f", "${projectDir.absolutePath}/operator/test.out")
         }
     }
 }

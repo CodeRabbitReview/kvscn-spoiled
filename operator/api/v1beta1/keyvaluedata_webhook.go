@@ -29,7 +29,7 @@ import (
 
 // log is for logging in this package.
 var keyvaluedatalog = logf.Log.WithName("keyvaluedata-resource")
-var c client.Client
+var WebhookClient client.Client
 var namespace = "default"
 
 var ErrEmptyData = errors.New("empty data field")
@@ -38,7 +38,7 @@ var ErrEmptyKeyOrValue = errors.New("empty key or value")
 // SetupWebhookWithManager creates new webhook manages and inits client
 // to access resources in k8s
 func (r *KeyValueData) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	c = mgr.GetClient()
+	WebhookClient = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
@@ -55,7 +55,7 @@ func (r *KeyValueData) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-key-value-teamdev-com-v1beta1-keyvaluedata,mutating=false,failurePolicy=fail,sideEffects=None,groups=key-value.teamdev.com,resources=keyvaluedata,verbs=create;update,versions=v1beta1,name=vkeyvaluedata.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-key-value-teamdev-com-v1beta1-keyvaluedata,mutating=false,failurePolicy=fail,sideEffects=None,groups=key-value.teamdev.com,resources=keyvaluedata,verbs=create;update;delete,versions=v1beta1,name=vkeyvaluedata.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &KeyValueData{}
 
@@ -65,7 +65,7 @@ func (r *KeyValueData) ValidateCreate() error {
 	keyvaluedatalog.Info("validate create", "name", r.Name)
 
 	var createdResources KeyValueDataList
-	if err := c.List(context.Background(), &createdResources, client.InNamespace(namespace)); err != nil {
+	if err := WebhookClient.List(context.Background(), &createdResources, client.InNamespace(namespace)); err != nil {
 		keyvaluedatalog.Error(err, "can not get all KeyValueData resources")
 		return err
 	}
@@ -100,7 +100,7 @@ func (r *KeyValueData) ValidateUpdate(old runtime.Object) error {
 	keyvaluedatalog.Info("validate update", "name", r.Name)
 
 	var createdResources KeyValueDataList
-	if err := c.List(context.Background(), &createdResources, client.InNamespace(namespace)); err != nil {
+	if err := WebhookClient.List(context.Background(), &createdResources, client.InNamespace(namespace)); err != nil {
 		keyvaluedatalog.Error(err, "can not get all KeyValueData resources")
 		return err
 	}
@@ -112,6 +112,7 @@ func (r *KeyValueData) ValidateUpdate(old runtime.Object) error {
 	if len(r.Spec.Data) == 0 {
 		return ErrEmptyData
 	}
+
 	for _, keyValueData := range createdResources.Items {
 		if keyValueData.Name != r.Name {
 			if k, ok := r.containsAny(keyValueData.Spec.Data); ok {
