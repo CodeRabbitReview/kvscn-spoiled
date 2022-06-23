@@ -1,0 +1,112 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: keyvaluedata.key-value.teamdev.com
+spec:
+  group: key-value.teamdev.com
+  names:
+    kind: KeyValueData
+    listKind: KeyValueDataList
+    plural: keyvaluedata
+    singular: keyvaluedata
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: KeyValueData is the Schema for the keyvaluedata API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: KeyValueDataSpec defines the desired state of KeyValueData
+            properties:
+              data:
+                additionalProperties:
+                  type: string
+                description: Data contains key value entities. These entities will
+                  be sent to the key-value storage
+                type: object
+            required:
+            - data
+            type: object
+          status:
+            description: KeyValueDataStatus defines the observed state of KeyValueData
+            properties:
+              conditions:
+                description: Conditions contains all Condition of every pair of data
+                items:
+                  description: Condition describes information about sent data.
+                  properties:
+                    key:
+                      description: Key value is a key of sent pair data.
+                      type: string
+                    lastInsertTime:
+                      description: LastInsertTime is time when request tried to be
+                        sent.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message is a response from server if something
+                        went wrong. If server response message is empty Message will
+                        be Response.Status from http package
+                      minLength: 0
+                      type: string
+                    reason:
+                      description: Reason may be any error which is the reason why
+                        request did not finish correctly. Reason if a first appeared
+                        error of steps to send data into server.
+                      minLength: 0
+                      type: string
+                    status:
+                      description: Status describes is data sent to the server. If
+                        data is not sent Status will be FailedStatus otherwise if
+                        everything is OK and data is sent Status will be SuccessStatus.
+                      type: string
+                    type:
+                      description: Type is an information about how data is sent.
+                        If data is not sent Type will be FailedType otherwise if everything
+                        is OK and data is sent Type will be AddedType.
+                      type: string
+                  required:
+                  - key
+                  - status
+                  - type
+                  type: object
+                type: array
+              failedSends:
+                description: FailedSends describes count of data which was not sent
+                  to server successfully
+                format: int32
+                type: integer
+              successSends:
+                description: SuccessSends describes count of data which was sent to
+                  server successfully
+                format: int32
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
