@@ -9,3 +9,4 @@ operator/bin
 server/bin
 persistence/storage.json
 persistence/recovered
+operator/1.23.5-darwin-amd64/
