@@ -16,3 +16,4 @@ data.json
 
 # Ignore Gradle build output directory
 build
+/operator/1.23.5-darwin-amd64/
