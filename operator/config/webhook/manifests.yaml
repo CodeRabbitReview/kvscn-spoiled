@@ -49,7 +49,6 @@ webhooks:
     operations:
     - CREATE
     - UPDATE
-    - DELETE
     resources:
     - keyvaluedata
   sideEffects: None

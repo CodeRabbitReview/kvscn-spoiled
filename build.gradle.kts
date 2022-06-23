@@ -244,7 +244,7 @@ tasks.register("testingDone") {
     val old = System.out
     val minPercentage = 70
     System.setOut(ps)
-    dependsOn( "operatorTest", "serverTest")
+    dependsOn("operatorTest", "serverTest")
     doFirst {
         System.out.flush()
         System.setOut(old)
@@ -261,8 +261,10 @@ tasks.register("testingDone") {
                 }
                 val percentage = parseFloat(t)
                 if (percentage < minPercentage) {
-                    throw TaskExecutionException(this,
-                        Exception(r))
+                    throw TaskExecutionException(
+                        this,
+                        Exception(r)
+                    )
                 }
             }
         }
