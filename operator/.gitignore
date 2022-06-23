@@ -26,3 +26,4 @@ testbin/*
 cover.html
 cover.out
 1.23.5-darwin-amd64/
+git filter-branch --index-filter 'git rm --cached --ignore-unmatch operator/1.23.5-darwin-amd64/kubectl'
