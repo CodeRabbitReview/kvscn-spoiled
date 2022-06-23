@@ -17,14 +17,10 @@ timestamps {
             }
             stage('Test') {
                 try {
-                    sh './gradlew test'
                     sh './gradlew testingDone'
                 } catch(Exception e) {
                     echo "Error in testing storage project: ${e.toString()}"
-                    sh 'cat test.out'
                     throw new Exception('Error in running tests(any test did not finish correctly)')
-                } finally {
-                    sh 'rm -f test.out'
                 }
             }
         }
