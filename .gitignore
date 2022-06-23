@@ -9,3 +9,4 @@ recovered
 storage.json
 /internal/storage/storage.json
 /.vagrant/
+./gradle/
