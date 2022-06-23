@@ -10,3 +10,5 @@ storage.json
 /internal/storage/storage.json
 /.vagrant/
 ./gradle/
+/gradle/
+kv-bundle-0.1.0.tgz
