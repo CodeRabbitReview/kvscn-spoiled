@@ -23,8 +23,14 @@ func TestStorage_Put(t *testing.T) {
 				Key:    models.NewKey(nil),
 				Entity: models.NewEntity(nil, nil),
 			},
-			*NewStorage(),
-			*NewStorage(),
+			Storage{
+				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.RWMutex{},
+			},
+			Storage{
+				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.RWMutex{},
+			},
 			models.ErrNilInput,
 		},
 		{
@@ -52,7 +58,10 @@ func TestStorage_Put(t *testing.T) {
 					models.NewKey("simple string"): models.NewEntity("simple", nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.RWMutex{},
+			},
 			nil,
 		},
 		{
@@ -66,7 +75,10 @@ func TestStorage_Put(t *testing.T) {
 					models.NewKey("number"): models.NewEntity(5, nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.RWMutex{},
+			},
 			nil,
 		},
 		{
@@ -80,7 +92,10 @@ func TestStorage_Put(t *testing.T) {
 					models.NewKey("slice"): models.NewEntity([]int{1, 2, 3}, nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.RWMutex{},
+			},
 			nil,
 		},
 		{
@@ -106,7 +121,10 @@ func TestStorage_Put(t *testing.T) {
 					}, nil),
 				},
 			},
-			*NewStorage(),
+			Storage{
+				pairs: make(map[Keyer]Entitier),
+				mu:    &sync.RWMutex{},
+			},
 			nil,
 		},
 	}

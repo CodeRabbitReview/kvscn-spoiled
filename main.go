@@ -3,6 +3,7 @@ package main
 import (
 	httpserver "github.com/mishaprokop4ik/storage/internal/http_server"
 	"github.com/mishaprokop4ik/storage/internal/http_server/handlers"
+	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"log"
 	"os"
@@ -10,9 +11,9 @@ import (
 
 func main() {
 	log := log.New(os.Stdout, "storage", log.LstdFlags)
-	storage := storage.NewStorage()
+	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile, log)
+
+	storage := storage.NewStorage(r)
 	server := httpserver.NewHTTPServer(log, handlers.NewStorage(log, storage))
-	if err := server.Run(); err != nil {
-		log.Fatal(err)
-	}
+	server.Run(r)
 }

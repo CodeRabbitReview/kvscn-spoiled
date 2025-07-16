@@ -4,3 +4,5 @@ storage.iml
 **/.DS_Store
 /bin/
 /out/
+file.txt
+recovered

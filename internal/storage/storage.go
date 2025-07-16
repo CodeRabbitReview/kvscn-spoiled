@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mishaprokop4ik/storage/internal/models"
+	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"reflect"
 	"sync"
 )
@@ -49,14 +50,20 @@ func (p Pair) nilEntity() bool {
 }
 
 type Storage struct {
-	pairs map[Keyer]Entitier
-	mu    *sync.RWMutex
+	pairs   map[Keyer]Entitier
+	mu      *sync.RWMutex
+	resumer resumer
 }
 
-func NewStorage() *Storage {
+type resumer interface {
+	RecoverData(action, data string, actions recoverer.Actions) error
+}
+
+func NewStorage(r resumer) *Storage {
 	return &Storage{
-		pairs: make(map[Keyer]Entitier),
-		mu:    &sync.RWMutex{},
+		pairs:   make(map[Keyer]Entitier),
+		mu:      &sync.RWMutex{},
+		resumer: r,
 	}
 }
 
@@ -70,10 +77,20 @@ func (s *Storage) Put(p Pair) error {
 	if p.emptyKey() {
 		return models.ErrEmptyKey
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.pairs[p.Key] = p.Entity
 
+	if v, ok := s.pairs[p.Key]; !ok ||
+		v != nil && string(v.JSON()) != string(p.Entity.JSON()) {
+		s.mu.Lock()
+		if s.resumer != nil {
+			err := s.resumer.RecoverData("p", string(p.Entity.JSON()), recoverer.DefaultActions)
+			if err != nil {
+				return err
+			}
+		}
+
+		defer s.mu.Unlock()
+		s.pairs[p.Key] = p.Entity
+	}
 	return nil
 }
 
@@ -85,10 +102,10 @@ func (s *Storage) Get(key Keyer) (Entitier, error) {
 		return nil, fmt.Errorf("no data in storage")
 	}
 	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if v, ok := s.pairs[key]; ok {
 		return v, nil
 	}
-	s.mu.RUnlock()
 	return nil, models.ErrNoSuchKey
 }
 
@@ -101,9 +118,22 @@ func (s *Storage) Delete(key Keyer) error {
 	if len(s.pairs) == 0 {
 		return fmt.Errorf("no data in storage")
 	}
-	if _, ok := s.pairs[key]; !ok {
+	if _, ok := s.pairs[key]; ok {
+		b, err := json.Marshal(key.Entity())
+		if err != nil {
+			return err
+		}
+		if s.resumer != nil {
+			err = s.resumer.RecoverData("d",
+				fmt.Sprintf(`{"key": %s}`, string(b)), recoverer.DefaultActions)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
 		return models.ErrNoSuchKey
 	}
+
 	delete(s.pairs, key)
 	return nil
 }
