@@ -34,26 +34,28 @@ type API struct {
 // http.Client will send data by https protocol
 // it no files by certPath NewAPI will send data by http
 // instead of https
-func NewAPI(url, certPath string) *API {
+func NewAPI(url string, certPath ...string) *API {
 	var t = http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxIdleConns = 20000
 	t.MaxConnsPerHost = 20000
-	_, err := os.Stat(certPath)
-	if errors.Is(err, os.ErrNotExist) {
-		zlog.Log.WithName("connector").
-			Info("create client with http only")
-		return &API{
-			client: &http.Client{Transport: t, Timeout: 10 * time.Second},
-			url:    url,
-		}
-	}
-	caCert, err := ioutil.ReadFile(certPath)
-	if err != nil {
-		zlog.Log.WithName("connector").
-			Error(err, "can not read certificate")
-	}
 	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
+	for i := 0; i < len(certPath); i++ {
+		_, err := os.Stat(certPath[i])
+		if errors.Is(err, os.ErrNotExist) {
+			zlog.Log.WithName("connector").
+				Info("create client with http only")
+			return &API{
+				client: &http.Client{Transport: t, Timeout: 10 * time.Second},
+				url:    url,
+			}
+		}
+		caCert, err := ioutil.ReadFile(certPath[i])
+		if err != nil {
+			zlog.Log.WithName("connector").
+				Error(err, "can not read certificate")
+		}
+		caCertPool.AppendCertsFromPEM(caCert)
+	}
 	t.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		RootCAs:    caCertPool,

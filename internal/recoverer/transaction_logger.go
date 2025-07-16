@@ -131,9 +131,9 @@ func (r *TransactionLogger) takeRecovered() {
 
 // SendRecovered takes recovered data and send it to client
 // first requests will put after it delete
-func (r *TransactionLogger) SendRecovered(port string) {
+func (r *TransactionLogger) SendRecovered(url string, certificates ...string) {
 	go r.takeRecovered()
-	client := client.NewAPI(fmt.Sprintf("https://localhost%s", port), "localhost.pem")
+	client := client.NewAPI(url, certificates...)
 	defer close(r.c)
 	wg := &sync.WaitGroup{}
 	var toDelete []string

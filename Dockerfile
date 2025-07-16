@@ -15,8 +15,6 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /root
 COPY --from=builder /storage/storage .
-COPY  localhost-key.pem .
-COPY  localhost.pem .
 EXPOSE 8080
 
 CMD ["./storage"]

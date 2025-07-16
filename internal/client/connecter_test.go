@@ -1,8 +1,9 @@
 //nolint
-package client
+package client_test
 
 import (
 	"fmt"
+	"github.com/mishaprokop4ik/storage/internal/client"
 	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"net/http"
 	"net/http/httptest"
@@ -17,11 +18,13 @@ func init() {
 	zlog.Init("stderr")
 }
 
+const certPath = "./../../persistence/localhost.pem"
+
 func BenchmarkPutConcurrently(b *testing.B) {
 	var err error
 	param := `{"key":"user1","entity": {"misha": 20}}`
 	expectedResult := []byte(`[{"key":"user1","entity":{"misha":20}}]`)
-	c := NewAPI("https://localhost:8080", "./../../localhost.pem")
+	c := client.NewAPI("https://localhost:8080", certPath)
 	var wg sync.WaitGroup
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -51,7 +54,7 @@ func BenchmarkPutSequentially(b *testing.B) {
 	var err error
 	param := `{"key":"user1","entity": {"misha": 20}}`
 	expectedResult := []byte(`[{"key":"user1","entity":{"misha":20}}]`)
-	c := NewAPI("https://localhost:8080", "./../../localhost.pem")
+	c := client.NewAPI("https://localhost:8080", certPath)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err = c.AddOrUpdate(param)
@@ -82,7 +85,7 @@ func TestGetAll(t *testing.T) {
 			name:               "with correct cert path",
 			expectedOut:        []byte(`{"key":"person","entity": {"misha": 20}}`),
 			expectedStatusCode: http.StatusOK,
-			certPath:           "./../../localhost.pem",
+			certPath:           certPath,
 			server: httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				if !reflect.DeepEqual(req.URL.String(), "/api/") {
 					t.Errorf("incorrect url %s; want: %s", req.URL.String(), "/api/")
@@ -114,7 +117,7 @@ func TestGetAll(t *testing.T) {
 			name:               "not http.StatusOK server response",
 			expectedOut:        []byte{},
 			expectedStatusCode: http.StatusInternalServerError,
-			certPath:           "./../localhost.pem",
+			certPath:           certPath,
 			server: httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				if !reflect.DeepEqual(req.URL.String(), "/api/") {
 					t.Errorf("incorrect url %s; want: %s", req.URL.String(), "/api/")
@@ -128,7 +131,7 @@ func TestGetAll(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewAPI(tt.server.URL, tt.certPath)
+			c := client.NewAPI(tt.server.URL, tt.certPath)
 
 			out, err := c.GetAll()
 			if err != nil && err.Error() != "incorrect status code want: 200; get: 500" {
@@ -191,7 +194,7 @@ func TestGetByID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewAPI(tt.server.URL, "./../../localhost.pem")
+			c := client.NewAPI(tt.server.URL, certPath)
 
 			out, err := c.GetByID(tt.key)
 			if err != nil &&
@@ -222,7 +225,7 @@ func TestAddOrUpdate(t *testing.T) {
 		{
 			name:               "simple insertion",
 			expectedStatusCode: http.StatusCreated,
-			certPath:           "./../../localhost.pem",
+			certPath:           certPath,
 			param:              `{"key":"person","entity": {"misha": 20}}`,
 			server: httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				if !reflect.DeepEqual(req.URL.String(), "/api/") {
@@ -237,7 +240,7 @@ func TestAddOrUpdate(t *testing.T) {
 		{
 			name:               "simple insertion with incorrect response status code",
 			expectedStatusCode: http.StatusBadGateway,
-			certPath:           "./../../localhost.pem",
+			certPath:           certPath,
 			param:              `{"key":"person","entity": {"misha": 20}}`,
 			server: httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				rw.WriteHeader(http.StatusBadGateway)
@@ -251,7 +254,7 @@ func TestAddOrUpdate(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		c := NewAPI(tt.server.URL, tt.certPath)
+		c := client.NewAPI(tt.server.URL, tt.certPath)
 
 		out, err := c.AddOrUpdate(`{"key":"person","entity": {"misha": 20}}`)
 		if err != nil && err.Error() != "incorrect status code want: 201; get: 502" {
@@ -306,7 +309,7 @@ func TestDelete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewAPI(tt.server.URL, "./../../localhost.pem")
+			c := client.NewAPI(tt.server.URL, certPath)
 			out, err := c.Delete(tt.key)
 			if err != nil && err.Error() != tt.expectedErr.Error() {
 				t.Error(err)

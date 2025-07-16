@@ -5,7 +5,8 @@ val binaryName = "storage_server"
 val dockerName = "miprokop/storage_server:v2"
 val port = "8080"
 val k8sTemplatesPath = "templates/"
-val storageDeployManifestFile = "storage_deploy.yaml"
+val storageDeployManifestFile = "storage.yaml"
+val metricsServerManifestFile = "metrics_server.yaml"
 
 description = "Storage gradle"
 version = "1.0.0"
@@ -23,6 +24,16 @@ tasks.register("format") {
 tasks.register("deploy") {
     group = "k8s"
     description = "Deploys the key-value storage app on the Kubernetes cluster"
+    doFirst {
+        exec {
+            commandLine = listOf("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml")
+        }
+    }
+    doFirst {
+        exec {
+            commandLine = listOf("kubectl", "apply", "-f", "${k8sTemplatesPath}${metricsServerManifestFile}")
+        }
+    }
     doLast {
         exec {
             commandLine = listOf("kubectl", "apply", "-f", "${k8sTemplatesPath}${storageDeployManifestFile}")

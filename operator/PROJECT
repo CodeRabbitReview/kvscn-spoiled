@@ -1,0 +1,16 @@
+domain: teamdev.com
+layout:
+- go.kubebuilder.io/v3
+projectName: operator
+repo: github.com/miprokop/storage
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: teamdev.com
+  group: key-value
+  kind: KeyValueData
+  path: github.com/miprokop/storage/api/v1beta1
+  version: v1beta1
+version: "3"
