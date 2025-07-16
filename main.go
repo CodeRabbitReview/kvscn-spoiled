@@ -13,6 +13,7 @@ func main() {
 	zlog.Log.WithName("storage").Info("started", "time", time.Now())
 	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile)
 	storage := storage.NewStorage(r)
-	server := httpserver.NewHTTPServer(handlers.NewStorage(storage))
+	server := httpserver.NewHTTPServer(handlers.NewStorage(storage), "localhost.pem",
+		"localhost-key.pem")
 	server.Run(r)
 }

@@ -14,8 +14,6 @@ import (
 	"time"
 )
 
-var certPath = "localhost.pem"
-
 //Response combines response status code and body
 type Response struct {
 	Body       []byte
@@ -33,7 +31,10 @@ type API struct {
 // http.Client, where http.Transport.MaxIdleConns and
 // http.Transport.MaxConnsPerHost changed to 20000
 // and http.Client.Timeout changed to 10 seconds
-func NewAPI(url string) *API {
+// http.Client will send data by https protocol
+// it no files by certPath NewAPI will send data by http
+// instead of https
+func NewAPI(url, certPath string) *API {
 	var t = http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxIdleConns = 20000
 	t.MaxConnsPerHost = 20000
@@ -46,10 +47,11 @@ func NewAPI(url string) *API {
 			url:    url,
 		}
 	}
-	caCert, err := ioutil.ReadFile("localhost.pem")
+	caCert, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		zlog.Log.WithName("connector").
 			Error(err, "can not read certificate")
+	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 	t.TLSClientConfig = &tls.Config{

@@ -18,11 +18,13 @@ import (
 // Handler is an interface http.Handler
 // it responds to an HTTP request
 type HTTPServer struct {
-	server *http.Server
+	server   *http.Server
+	certPath string
+	keyPath  string
 }
 
 // NewHTTPServer is a constructor of HTTPServer
-func NewHTTPServer(h http.Handler) *HTTPServer {
+func NewHTTPServer(h http.Handler, certPath, keyPath string) *HTTPServer {
 	cfg := &tls.Config{
 		MinVersion:       tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
@@ -44,7 +46,7 @@ func NewHTTPServer(h http.Handler) *HTTPServer {
 		MaxHeaderBytes: 0,
 		TLSConfig:      cfg,
 		TLSNextProto:   make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
-	}}
+	}, certPath: certPath, keyPath: keyPath}
 }
 
 type resumer interface {
@@ -56,8 +58,8 @@ type resumer interface {
 // Run catch system signal and display it
 func (s *HTTPServer) Run(r resumer) {
 	go func() {
-		if err := s.server.ListenAndServeTLS("localhost.pem",
-			"localhost-key.pem"); err != nil {
+		if err := s.server.ListenAndServeTLS(s.certPath,
+			s.keyPath); err != nil {
 			zlog.Log.Error(err, "can not start https server")
 			return
 		}
