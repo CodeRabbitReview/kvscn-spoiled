@@ -3,9 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"html/template"
-	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -36,13 +36,12 @@ type Storager interface {
 // log is a log.Logger
 // and storage is a Storager
 type Storage struct {
-	log     *log.Logger
 	storage Storager
 }
 
 // NewStorage is a constructor of Storage
-func NewStorage(l *log.Logger, s Storager) *Storage {
-	return &Storage{log: l, storage: s}
+func NewStorage(s Storager) *Storage {
+	return &Storage{storage: s}
 }
 
 // ServeHTTP should write reply headers and data to the ResponseWriter
@@ -60,13 +59,15 @@ func NewStorage(l *log.Logger, s Storager) *Storage {
 // id can be any value
 // if URL is incorrect returns http.StatusNotFound and nothing in body
 func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user call", "search host",
+		r.Host, "user url", r.URL.User, "host", r.URL.Host)
 	url := r.URL.String()
 
 	if !strings.HasPrefix(url, "/api/") {
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
@@ -74,7 +75,7 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusNotAcceptable,
-		}, s.log)
+		})
 		return
 	}
 
@@ -108,13 +109,14 @@ func (s *Storage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sendResponse(w, response{
 		Data:       fmt.Errorf("not found action by input url"),
 		StatusCode: http.StatusNotFound,
-	}, s.log)
+	})
 }
 
 // GetAll sends data to http.ResponseWriter in JSON format
 // response is an array of JSON objects
 // if no value in storage returns no data in storage error
 func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to get all")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	storageData, err := s.storage.GetAll()
@@ -122,7 +124,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
@@ -140,16 +142,17 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := json.Marshal(respData)
 	if err != nil {
+		zlog.Log.WithName("http server").Error(err, "cannot marshal json")
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 	}
 
 	sendResponse(w, response{
 		Data:       resp,
 		StatusCode: http.StatusOK,
-	}, s.log)
+	})
 }
 
 // Get sends data to http.ResponseWriter in JSON format
@@ -159,6 +162,7 @@ func (s *Storage) GetAll(w http.ResponseWriter, r *http.Request) {
 // if no value in storage returns no data in storage error
 // Get takes first param from URL from http.Request
 func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to get by id")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
@@ -166,7 +170,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 	data, err := s.storage.Get(pair.Key)
@@ -174,14 +178,14 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
 	sendResponse(w, response{
 		Data:       data.JSON(),
 		StatusCode: http.StatusOK,
-	}, s.log)
+	})
 }
 
 // Put method takes data from http.Request body.
@@ -195,6 +199,7 @@ func (s *Storage) Get(w http.ResponseWriter, r *http.Request) {
 // Spaces before and after will be removed
 // spaces between words will be changed to _ symbol
 func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to put")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
@@ -202,7 +207,7 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 
@@ -211,14 +216,14 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusBadRequest,
-		}, s.log)
+		})
 		return
 	}
 
 	sendResponse(w, response{
 		Data:       nil,
 		StatusCode: http.StatusCreated,
-	}, s.log)
+	})
 }
 
 // Delete sends data to http.ResponseWriter in JSON format
@@ -228,6 +233,7 @@ func (s *Storage) Put(w http.ResponseWriter, r *http.Request) {
 // if some error appears http.StatusInternalServerError
 // if everything is OK returns http.StatusNoContent and nothing in body
 func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to delete")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	pair, err := getPairFromBody(r)
@@ -235,7 +241,7 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 	err = s.storage.Delete(pair.Key)
@@ -243,13 +249,13 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, response{
 			Data:       err.Error(),
 			StatusCode: http.StatusNotFound,
-		}, s.log)
+		})
 		return
 	}
 
 	sendResponse(w, response{
 		StatusCode: http.StatusNoContent,
-	}, s.log)
+	})
 }
 
 // OutHTML takes all data from Storage
@@ -257,15 +263,17 @@ func (s *Storage) Delete(w http.ResponseWriter, r *http.Request) {
 // If no data in storage - will be printed such text.
 // If there is any data in storage - will be printed table with data.
 func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
+	zlog.Log.WithName("http server").Info("user request to html out")
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	w.Header().Set("Content-Type", "text/html;charset=utf-8")
 	t, err := template.ParseFiles(indexPath)
 	if err != nil {
-		s.log.Println(err)
+		zlog.Log.WithName("http server").
+			Error(err, "cannot parse html template")
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 
@@ -283,10 +291,12 @@ func (s *Storage) OutHTML(w http.ResponseWriter, r *http.Request) {
 
 	err = t.Execute(w, resp)
 	if err != nil {
+		zlog.Log.WithName("http server").
+			Error(err, "cannot execute html template")
 		sendResponse(w, response{
 			Data:       nil,
 			StatusCode: http.StatusInternalServerError,
-		}, s.log)
+		})
 		return
 	}
 }

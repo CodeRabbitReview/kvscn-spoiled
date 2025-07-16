@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"reflect"
@@ -81,10 +82,12 @@ func (s *Storage) Put(p Pair) error {
 	if v, ok := s.pairs[p.Key]; !ok ||
 		v != nil && string(v.JSON()) != string(p.Entity.JSON()) {
 		if s.resumer != nil {
-			err := s.resumer.RecoverData("p", string(p.Entity.JSON()), recoverer.DefaultActions)
-			if err != nil {
-				return err
-			}
+			go func() {
+				err := s.resumer.RecoverData("p", string(p.Entity.JSON()), recoverer.DefaultActions)
+				if err != nil {
+					zlog.Log.WithName("storage").Error(err, "can not recover data")
+				}
+			}()
 		}
 
 		s.mu.Lock()
@@ -124,11 +127,13 @@ func (s *Storage) Delete(key Keyer) error {
 			return err
 		}
 		if s.resumer != nil {
-			err = s.resumer.RecoverData("d",
-				fmt.Sprintf(`{"key": %s}`, string(b)), recoverer.DefaultActions)
-			if err != nil {
-				return err
-			}
+			go func() {
+				if err != nil {
+					err = s.resumer.RecoverData("d",
+						fmt.Sprintf(`{"key": %s}`, string(b)), recoverer.DefaultActions)
+					zlog.Log.WithName("storage").Error(err, "can not recover data")
+				}
+			}()
 		}
 	} else {
 		return models.ErrNoSuchKey

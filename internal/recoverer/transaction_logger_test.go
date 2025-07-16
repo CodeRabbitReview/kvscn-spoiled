@@ -4,7 +4,6 @@ package recoverer
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,7 +18,6 @@ func TestRecover_RecoverData(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	logger := &log.Logger{}
 	defer os.Remove(file.Name())
 	removeAllSpaces, err := regexp.Compile(`\r|\t|\n| `)
 	if err != nil {
@@ -38,7 +36,7 @@ func TestRecover_RecoverData(t *testing.T) {
 			name:          "incorrect action",
 			action:        "g",
 			data:          `{"key": {"1": 20},"entity": {"misha": 20}}`,
-			logger:        NewTransactionLogger(file.Name(), logger),
+			logger:        NewTransactionLogger(file.Name()),
 			expectedError: fmt.Errorf(`incorrect action type: g; want one of this: [p d]`),
 			expectedOut:   ``,
 		},
@@ -46,7 +44,7 @@ func TestRecover_RecoverData(t *testing.T) {
 			name:          "correct insert",
 			action:        "p",
 			data:          `{"key":{"1": 20},"entity": {"misha": 20}}`,
-			logger:        NewTransactionLogger(file.Name(), logger),
+			logger:        NewTransactionLogger(file.Name()),
 			expectedError: nil,
 			expectedOut:   `p{"key":{"1":20},"entity":{"misha":20}}`,
 		},
@@ -54,7 +52,7 @@ func TestRecover_RecoverData(t *testing.T) {
 			name:          "correct delete",
 			action:        "d",
 			data:          `{"key": {"1": 20}`,
-			logger:        NewTransactionLogger(file.Name(), logger),
+			logger:        NewTransactionLogger(file.Name()),
 			expectedError: nil,
 			expectedOut:   `p{"key":{"1":20},"entity":{"misha":20}}d{"key":{"1":20}`,
 		},
@@ -120,8 +118,7 @@ func TestRecover_SendRecovered(t *testing.T) {
 		rw.WriteHeader(http.StatusOK)
 	}))
 
-	log := log.New(os.Stdout, "storage_test", log.LstdFlags)
-	transactionLogger := NewTransactionLogger(f.Name(), log)
+	transactionLogger := NewTransactionLogger(f.Name())
 	port := strings.Split(server.URL, ":")[2]
 	transactionLogger.SendRecovered(":" + port)
 }

@@ -4,7 +4,7 @@
 // simple and common operation in storage GetAll, Get, Put, Delete.
 //
 //
-// There is a Storage struct to connect 2 values logger and storage.
+// There is a Storage struct to connect 2 values log and storage.
 // Logger is a log.Logger. Storage implements Storager interface
 // in this struct there are a lot of methods:
 // Storage.ServeHTTP that handlers all http request and calls specific

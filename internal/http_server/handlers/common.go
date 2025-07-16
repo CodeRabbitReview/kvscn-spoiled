@@ -3,10 +3,10 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/models"
 	"github.com/mishaprokop4ik/storage/internal/storage"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -15,14 +15,14 @@ type response struct {
 	StatusCode int         `json:"-"`
 }
 
-func sendResponse(w http.ResponseWriter, data response, logger *log.Logger) {
+func sendResponse(w http.ResponseWriter, data response) {
 	w.WriteHeader(data.StatusCode)
 	if v, ok := data.Data.([]byte); ok {
 		if data.Data != nil {
 			if _, err := w.Write(v); err != nil {
-				if logger != nil {
-					logger.Fatal(err)
-				}
+				zlog.Log.WithName("http server").
+					Error(err, "can not send response body")
+				return
 			}
 		}
 		return
@@ -32,7 +32,9 @@ func sendResponse(w http.ResponseWriter, data response, logger *log.Logger) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		if _, err = w.Write([]byte(err.Error())); err != nil {
-			logger.Fatal(err)
+			zlog.Log.WithName("http server").
+				Error(err, "can not send response header")
+			return
 		}
 		return
 	}
@@ -40,9 +42,9 @@ func sendResponse(w http.ResponseWriter, data response, logger *log.Logger) {
 	if data.Data != nil {
 		if _, err = w.Write(resp); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			if logger != nil {
-				logger.Fatal(err)
-			}
+			zlog.Log.WithName("http server").
+				Error(err, "can not send response body")
+			return
 		}
 	}
 }

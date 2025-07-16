@@ -3,17 +3,16 @@ package main
 import (
 	httpserver "github.com/mishaprokop4ik/storage/internal/http_server"
 	"github.com/mishaprokop4ik/storage/internal/http_server/handlers"
+	zlog "github.com/mishaprokop4ik/storage/internal/log"
 	"github.com/mishaprokop4ik/storage/internal/recoverer"
 	"github.com/mishaprokop4ik/storage/internal/storage"
-	"log"
-	"os"
+	"time"
 )
 
 func main() {
-	log := log.New(os.Stdout, "storage", log.LstdFlags)
-	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile, log)
-
+	zlog.Log.WithName("storage").Info("started", "time", time.Now())
+	r := recoverer.NewTransactionLogger(recoverer.DefaultSaveFile)
 	storage := storage.NewStorage(r)
-	server := httpserver.NewHTTPServer(log, handlers.NewStorage(log, storage))
+	server := httpserver.NewHTTPServer(handlers.NewStorage(storage))
 	server.Run(r)
 }

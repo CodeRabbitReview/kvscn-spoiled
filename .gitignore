@@ -6,3 +6,5 @@ storage.iml
 /out/
 file.txt
 recovered
+storage.json
+/internal/storage/storage.json
