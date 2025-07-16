@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage-d
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storage
+  template:
+    metadata:
+      labels:
+        app: storage
+    spec:
+      containers:
+        - name: storage
+          image: miprokop/storage_server:v2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http-server
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: 300m
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          volumeMounts:
+            - name: storage-volume
+              mountPath: /root/persistence
+            - name: storage-recovered
+              mountPath: /root/persistence/recovered
+            - name: storage-logs
+              mountPath: /root/persistence/storage.json
+      volumes:
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: storage-pvc
+        - name: storage-recovered
+          hostPath:
+            path: /root/persistence/recovered
+            type: FileOrCreate
+        - name: storage-logs
+          hostPath:
+            path: /root/persistence/storage.json
+            type: FileOrCreate

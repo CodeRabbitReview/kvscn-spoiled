@@ -7,16 +7,16 @@ WORKDIR /storage
 COPY . .
 RUN apk --no-cache add git alpine-sdk build-base gcc
 RUN go mod download
-RUN CGO_ENABLE=0 go build -o storage main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o storage main.go
 
 FROM alpine:3.15.4
 
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /root
-
 COPY --from=builder /storage/storage .
 COPY  localhost-key.pem .
 COPY  localhost.pem .
+EXPOSE 8080
 
 CMD ["./storage"]
