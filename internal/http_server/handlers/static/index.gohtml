@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Storage</title>
+    <style>
+        .storage_out {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .storage_out-data, .storage_out-header {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        .storage_out-row:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>
+        Key value storage
+    </h1>
+</header>
+<div class="main">
+    <table class="storage_out">
+        {{ $length := len .Data }}
+        {{if eq $length 0}}
+            <div class="empty_storage">
+                The key value storage is empty
+            </div>
+        {{end}}
+
+        {{if ne $length 0}}
+            <tr class="storage_out-row">
+                <th class="storage_out-header">
+                    Key
+                </th>
+                <th class="storage_out-header">
+                    Entity
+                </th>
+            </tr>
+            {{- range $Key, $Value := .Data }}
+                <tr class="storage_out-row">
+                    <td class="storage_out-data">
+                        {{ $Key }}
+                    </td>
+                    <td class="storage_out-data">
+                        {{ $Value }}
+                    </td>
+                </tr>
+            {{end}}
+        {{end}}
+    </table>
+</div>
+</body>
+</html>
