@@ -9,6 +9,7 @@
 // Key has one field to save input data in JSON format or golang in string
 // Key has 2 methods Key.Type for getting type of golang data
 // Key.Entity to get data
-// Key constructor(NewKey) has options to remove spaces from start and end of key and change spaces between words in key
+// Key constructor(NewKey) has options to removes spaces
+// from start and end of key and change spaces between words in key
 // to _
 package models
