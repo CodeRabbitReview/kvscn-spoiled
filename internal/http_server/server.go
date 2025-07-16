@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net/http"
 	"os"
@@ -23,6 +24,17 @@ type HTTPServer struct {
 
 // NewHTTPServer is a constructor of HTTPServer
 func NewHTTPServer(l *log.Logger, h http.Handler) *HTTPServer {
+	cfg := &tls.Config{
+		MinVersion:       tls.VersionTLS12,
+		CurvePreferences: []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+		},
+		PreferServerCipherSuites: true,
+	}
 	return &HTTPServer{server: &http.Server{
 		Addr:           ":8080",
 		Handler:        h,
@@ -30,6 +42,8 @@ func NewHTTPServer(l *log.Logger, h http.Handler) *HTTPServer {
 		WriteTimeout:   60 * time.Second,
 		IdleTimeout:    10 * time.Second,
 		MaxHeaderBytes: 0,
+		TLSConfig:      cfg,
+		TLSNextProto:   make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}, logger: l}
 }
 
@@ -37,12 +51,13 @@ type resumer interface {
 	SendRecovered(addr string)
 }
 
-// Run runs http server and take recovered data and send it
+// Run runs https server and take recovered data and send it
 // to server in parallel.
 // Run catch system signal and display it
 func (s *HTTPServer) Run(r resumer) {
 	go func() {
-		if err := s.server.ListenAndServe(); err != nil {
+		if err := s.server.ListenAndServeTLS("localhost.pem",
+			"localhost-key.pem"); err != nil {
 			s.logger.Fatal(err)
 		}
 	}()
