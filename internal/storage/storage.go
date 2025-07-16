@@ -1,47 +1,71 @@
 package storage
 
 import (
-	"github.com/mishaprokop4ik/storage/internal/storage/models"
+	"encoding/json"
+	"fmt"
+	"github.com/mishaprokop4ik/storage/internal/models"
 	"reflect"
 )
 
+// Value responds to simple value in storage
 type Value interface {
 	Type() reflect.Type
 	Entity() interface{}
 }
 
-// Pair combines a key and input value
+// Keyer responds to key value in storage
+// Keyer has to have Value methods
+type Keyer interface {
+	Value
+}
+
+// Entitier responds to entity value in storage
+// Entitier has to have Value methods and JSON that gives
+// entity value in json format
+type Entitier interface {
+	Value
+	JSON() json.RawMessage
+}
+
+// Pair combines a Keyer and input Entitier interfaces
 type Pair struct {
-	Key    Value
-	Entity Value
+	Key    Keyer
+	Entity Entitier
 }
 
 func (p Pair) emptyKey() bool {
-	return p.Key.Entity() == "" || p.Key.Entity() == nil
+	if v, ok := p.Key.Entity().(string); ok {
+		return v == "" || v == "{}" || v == "<nil>"
+	}
+	return p.Key.Entity() == nil
 }
 
 func (p Pair) nilEntity() bool {
-	return p.Entity.Entity() == "" || p.Entity.Entity() == nil
+	if v, ok := p.Entity.Entity().(string); ok {
+		return v == "" || v == "{}" || v == "<nil>"
+	}
+	return p.Entity.Entity() == nil
 }
 
 type Storage struct {
-	pairs map[Value]Value
+	pairs map[Keyer]Entitier
 }
 
 func NewStorage() *Storage {
 	return &Storage{
-		pairs: make(map[Value]Value),
+		pairs: make(map[Keyer]Entitier),
 	}
 }
 
-//Put add new value to storage
+//Put add new value to storage or update old value by key
+//If key or value is empty - return errors models.ErrNilInput and models.ErrEmptyKey
 func (s *Storage) Put(p Pair) error {
 	if p.nilEntity() {
 		return models.ErrNilInput
 	}
 
 	if p.emptyKey() {
-		return models.ErrEmptyKeyString
+		return models.ErrEmptyKey
 	}
 	s.pairs[p.Key] = p.Entity
 
@@ -49,8 +73,12 @@ func (s *Storage) Put(p Pair) error {
 }
 
 // Get returns a copy of value from storage
-// If no such data by key returns NoSuchValue error
-func (s *Storage) Get(key Value) (Value, error) {
+// If no such data by key returns models.ErrNilInput error
+// If there is not any data in storage returns no data in storage error
+func (s *Storage) Get(key Keyer) (Entitier, error) {
+	if len(s.pairs) == 0 {
+		return nil, fmt.Errorf("no data in storage")
+	}
 	if v, ok := s.pairs[key]; ok {
 		return v, nil
 	}
@@ -59,7 +87,24 @@ func (s *Storage) Get(key Value) (Value, error) {
 }
 
 // Delete remove data from storage
-// A key is ignored if it does not exist
-func (s *Storage) Delete(key Value) {
+// If there is not any data by key
+// If there is not any data in storage returns no data in storage error
+func (s *Storage) Delete(key Keyer) error {
+	if len(s.pairs) == 0 {
+		return fmt.Errorf("no data in storage")
+	}
+	if _, ok := s.pairs[key]; !ok {
+		return models.ErrNoSuchKey
+	}
 	delete(s.pairs, key)
+	return nil
+}
+
+// GetAll returns all data from storage
+// If there is not any data in storage returns no data in storage error
+func (s *Storage) GetAll() (map[Keyer]Entitier, error) {
+	if len(s.pairs) == 0 {
+		return nil, fmt.Errorf("no data in storage")
+	}
+	return s.pairs, nil
 }
