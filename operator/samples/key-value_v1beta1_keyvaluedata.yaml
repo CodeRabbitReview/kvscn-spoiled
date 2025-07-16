@@ -1,0 +1,11 @@
+apiVersion: key-value.teamdev.com/v1beta1
+kind: KeyValueData
+metadata:
+  name: keyvaluedata-sample4
+spec:
+  data:
+<<<<<<< HEAD
+    "123123": "1231236"
+=======
+    "123123": "1231234"
+>>>>>>> ef0ae2662414d0a54b3c8fb778fe780780897981

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.persistenceVolume.name }}
+  labels:
+    type: {{ .Values.persistenceVolume.type }}
+  namespace: {{.Values.namespace}}
+spec:
+  storageClassName: {{ .Values.persistenceVolume.storageClassName }}
+  volumeMode: {{ .Values.persistenceVolume.volumeMode }}
+  capacity:
+    storage: {{ .Values.persistenceVolume.capacity }}
+  accessModes:
+    - {{ .Values.persistenceVolumeClaim.accessModes }}
+  {{- if eq .Values.persistenceVolume.type "local"}}
+  hostPath:
+    path: {{ .Values.persistenceVolume.hostPath }}
+  {{- end}}
