@@ -1,0 +1,19 @@
+/.idea/
+/.git/
+/.vagrant/
+storage.iml
+**/.DS_Store
+/bin/
+/out/
+file.txt
+persistence/recovered
+persistence/storage.json
+/server/internal/storage/storage.json
+storage.json
+data.json
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+/operator/1.23.5-darwin-amd64/

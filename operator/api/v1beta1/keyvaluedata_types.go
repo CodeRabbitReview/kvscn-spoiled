@@ -32,12 +32,14 @@ type Data map[string]string
 
 // Type describes how key-value data is sent to the server.
 // Only one of the following concurrent types may be specified.
-//kubebuilder:validation:Enum:Added;Failed
+//kubebuilder:validation:Enum:Added;Failed;Changed;Deleted
 type Type string
 
 const (
-	AddedType  Type = "Added"
-	FailedType Type = "Failed"
+	AddedType   Type = "Added"
+	DeletedType Type = "Deleted"
+	ChangedType Type = "Changed"
+	FailedType  Type = "Failed"
 )
 
 // Status describes is data sent to the server.

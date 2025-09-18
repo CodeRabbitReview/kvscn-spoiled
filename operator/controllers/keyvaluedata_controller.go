@@ -83,6 +83,7 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 		logger.Info("add default finalizer", "resource name: ", keyValueData.Name)
 		if !controllerutil.ContainsFinalizer(&keyValueData, r.FinalizerName) {
 			controllerutil.AddFinalizer(&keyValueData, r.FinalizerName)
+
 			if err := r.Update(ctx, &keyValueData); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -91,7 +92,12 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 		logger.Info("delete corresponding data before resource deletion",
 			"resource name: ", keyValueData.Name, "time: ", time.Now().String())
 		if controllerutil.ContainsFinalizer(&keyValueData, r.FinalizerName) {
-			_, _, _ = r.createRequests(ctx, keyValueData.Spec.Data, http.MethodDelete, http.StatusNoContent)
+			for k := range keyValueData.Spec.Data {
+				_, _, _ = r.createRequests(ctx, DataRequest{
+					Key: k,
+				}, http.MethodDelete,
+					http.StatusNoContent, kvdv1beta1.DeletedType)
+			}
 			controllerutil.RemoveFinalizer(&keyValueData, r.FinalizerName)
 			if err := r.Update(ctx, &keyValueData); err != nil {
 				return ctrl.Result{}, err
@@ -100,21 +106,54 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 
 		return ctrl.Result{}, nil
 	}
-
+	var conditions []*kvdv1beta1.Condition
+	var successSends int32
+	var failedSends int32
 	if len(keyValueData.Status.Conditions) != 0 {
-		var toRemove = make(kvdv1beta1.Data)
-		for _, c := range keyValueData.Status.Conditions {
-			if _, ok := keyValueData.Spec.Data[c.Key]; !ok {
-				toRemove[c.Key] = ""
+		for i, c := range keyValueData.Status.Conditions {
+			if v, ok := keyValueData.Spec.Data[c.Key]; !ok {
+				_, _, _ = r.createRequests(ctx, DataRequest{
+					Key: c.Key,
+				},
+					http.MethodDelete, http.StatusNoContent, kvdv1beta1.DeletedType)
 				logger.Info("key to delete in update", "key: ", c.Key)
+				keyValueData.Status.Conditions[i] = keyValueData.Status.Conditions[len(keyValueData.Status.Conditions)-1]
+				keyValueData.Status.Conditions[len(keyValueData.Status.Conditions)-1] = nil
+				keyValueData.Status.Conditions = keyValueData.Status.Conditions[:len(keyValueData.Status.Conditions)-1]
+			} else {
+				logger.Info("key to update in update", "key: ", c.Key)
+				condition, success, failed := r.createRequests(ctx, DataRequest{
+					Key:    c.Key,
+					Entity: v,
+				},
+					http.MethodPut, http.StatusCreated, kvdv1beta1.ChangedType)
+				conditions = append(conditions, condition)
+				successSends += success
+				failedSends += failed
 			}
 		}
-		_, _, _ = r.createRequests(ctx, toRemove,
-			http.MethodDelete, http.StatusNoContent)
 	}
 
-	conditions, successSends, failedSends := r.createRequests(ctx, keyValueData.Spec.Data,
-		http.MethodPost, http.StatusCreated)
+	contains := func(conditions []*kvdv1beta1.Condition, key string) bool {
+		for i := 0; i < len(conditions); i++ {
+			if conditions[i].Key == key {
+				return true
+			}
+		}
+		return false
+	}
+
+	for k, v := range keyValueData.Spec.Data {
+		if !contains(conditions, k) {
+			condition, success, failed := r.createRequests(ctx, DataRequest{
+				Key:    k,
+				Entity: v,
+			}, http.MethodPost, http.StatusCreated, kvdv1beta1.AddedType)
+			conditions = append(conditions, condition)
+			successSends += success
+			failedSends += failed
+		}
+	}
 
 	sort.Slice(conditions, func(i, j int) bool {
 		return conditions[i].Key < conditions[j].Key
@@ -128,110 +167,86 @@ func (r *KeyValueDataReconciler) Reconcile(ctx context.Context,
 	return ctrl.Result{}, err
 }
 
-func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entities kvdv1beta1.Data,
-	method string, expectedStatusCode int) ([]*kvdv1beta1.Condition, int32, int32) {
+func (r *KeyValueDataReconciler) createRequests(ctx context.Context, entity DataRequest,
+	method string, expectedStatusCode int, neededType kvdv1beta1.Type) (*kvdv1beta1.Condition, int32, int32) {
 	logger := log.FromContext(ctx)
-	var requestStatuses = make([]*kvdv1beta1.Condition, len(entities))
-	var successSends int32
-	var failedSends int32
-	var i int32
 
-	for k, e := range entities {
-		requestData := &DataRequest{
-			Key:    k,
-			Entity: e,
-		}
-		logger.Info("request key", "key: ", k)
-		marshaledRequestData, err := json.Marshal(requestData)
-		if err != nil {
-			logger.Error(err, "can not marshall req data")
-			requestStatuses[i] = &kvdv1beta1.Condition{
-				Key:    k,
-				Type:   kvdv1beta1.FailedType,
-				Status: kvdv1beta1.FailedStatus,
-				Reason: fmt.Sprintf("%s: %s",
-					"can not marshall req data", err.Error()),
-			}
-			i++
-			failedSends++
-			continue
-		}
-		logger.Info("marshaled resource", "key: ", k, "time: ", time.Now().String())
-
-		request, err := http.NewRequest(method, r.ServerURL,
-			bytes.NewBuffer(marshaledRequestData))
-		if err != nil && err != io.EOF {
-			logger.Error(err, "can not create http request")
-			logger.Error(err, "can not read req data to http request")
-			requestStatuses[i] = &kvdv1beta1.Condition{
-				Key:    k,
-				Type:   kvdv1beta1.FailedType,
-				Status: kvdv1beta1.FailedStatus,
-				Reason: fmt.Sprintf("%s: %s",
-					"can not create request to server", err.Error()),
-			}
-			i++
-			failedSends++
-			continue
-		}
-		response, err := r.HTTPClient.Do(request)
-		if err != nil {
-			logger.Error(err, "can not send request")
-			requestStatuses[i] = &kvdv1beta1.Condition{
-				Key:    k,
-				Type:   kvdv1beta1.FailedType,
-				Status: kvdv1beta1.FailedStatus,
-				Reason: fmt.Sprintf("%s: %s",
-					"can not send request data to server", err.Error()),
-			}
-			i++
-			failedSends++
-			continue
-		}
-		logger.Info("sent request to server", "key: ", k, "time: ", time.Now().String())
-		request.Body.Close()
-
-		if response.StatusCode != expectedStatusCode {
-			var b []byte
-			var reason string
-			_, err = response.Body.Read(b)
-			if err != nil && err != io.EOF {
-				reason = fmt.Sprintf("data is not created: %s", err)
-			}
-			logger.Error(fmt.Errorf("incorrect status code"), "server sent unexpected response",
-				"expected status code", http.StatusCreated,
-				"got", response.StatusCode, "body data", string(b), "key: ", k)
-
-			m := string(b)
-			if len(b) == 0 {
-				m = response.Status
-			}
-
-			requestStatuses[i] = &kvdv1beta1.Condition{
-				Key:     k,
-				Type:    kvdv1beta1.FailedType,
-				Status:  kvdv1beta1.FailedStatus,
-				Reason:  reason,
-				Message: m,
-			}
-			i++
-			failedSends++
-			continue
-		}
-		response.Body.Close()
-
-		requestStatuses[i] = &kvdv1beta1.Condition{
-			Key:            k,
-			Type:           kvdv1beta1.AddedType,
-			Status:         kvdv1beta1.SuccessStatus,
-			LastInsertTime: &metav1.Time{Time: time.Now()},
-		}
-		i++
-		successSends++
-		logger.Info("send value to server successfully",
-			"key: ", k, "time: ", time.Now().String())
+	logger.Info("request key", "key: ", entity.Key)
+	marshaledRequestData, err := json.Marshal(entity)
+	if err != nil {
+		logger.Error(err, "can not marshall req data")
+		return &kvdv1beta1.Condition{
+			Key:    entity.Key,
+			Type:   kvdv1beta1.FailedType,
+			Status: kvdv1beta1.FailedStatus,
+			Reason: fmt.Sprintf("%s: %s",
+				"can not marshall req data", err.Error()),
+		}, 0, 1
 	}
-	return requestStatuses, successSends, failedSends
+	logger.Info("marshaled resource", "key: ", entity.Key, "time: ", time.Now().String())
+
+	request, err := http.NewRequest(method, r.ServerURL,
+		bytes.NewBuffer(marshaledRequestData))
+	if err != nil && err != io.EOF {
+		logger.Error(err, "can not create http request")
+		logger.Error(err, "can not read req data to http request")
+		return &kvdv1beta1.Condition{
+			Key:    entity.Key,
+			Type:   kvdv1beta1.FailedType,
+			Status: kvdv1beta1.FailedStatus,
+			Reason: fmt.Sprintf("%s: %s",
+				"can not create request to server", err.Error()),
+		}, 0, 1
+	}
+	response, err := r.HTTPClient.Do(request)
+	if err != nil {
+		logger.Error(err, "can not send request")
+		return &kvdv1beta1.Condition{
+			Key:    entity.Key,
+			Type:   kvdv1beta1.FailedType,
+			Status: kvdv1beta1.FailedStatus,
+			Reason: fmt.Sprintf("%s: %s",
+				"can not send request data to server", err.Error()),
+		}, 0, 1
+	}
+	logger.Info("sent request to server", "key: ", entity.Key, "time: ", time.Now().String())
+	request.Body.Close()
+
+	if response.StatusCode != expectedStatusCode {
+		var b []byte
+		var reason string
+		_, err = response.Body.Read(b)
+		if err != nil && err != io.EOF {
+			reason = fmt.Sprintf("data is not created: %s", err)
+		}
+		logger.Error(fmt.Errorf("incorrect status code"), "server sent unexpected response",
+			"expected status code", http.StatusCreated,
+			"got", response.StatusCode, "body data", string(b), "key: ", entity.Key)
+
+		m := string(b)
+		if len(b) == 0 {
+			m = response.Status
+		}
+
+		return &kvdv1beta1.Condition{
+			Key:     entity.Key,
+			Type:    kvdv1beta1.FailedType,
+			Status:  kvdv1beta1.FailedStatus,
+			Reason:  reason,
+			Message: m,
+		}, 0, 1
+	}
+	response.Body.Close()
+
+	logger.Info("send value to server successfully",
+		"key: ", entity.Key, "time: ", time.Now().String())
+
+	return &kvdv1beta1.Condition{
+		Key:            entity.Key,
+		Type:           neededType,
+		Status:         kvdv1beta1.SuccessStatus,
+		LastInsertTime: &metav1.Time{Time: time.Now()},
+	}, 1, 0
 }
 
 // SetupWithManager sets up the controller with the Manager. With GenerationChanged predicate into this manages.

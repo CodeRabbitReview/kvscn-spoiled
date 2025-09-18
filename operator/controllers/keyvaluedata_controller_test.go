@@ -41,7 +41,7 @@ var _ = Describe("KeyValueData controller", func() {
 			}
 			k8sClient.Delete(ctx, keyValueData)
 		})
-		It("Should change KeyValueData Status to one successes action", func() {
+		It("Should change KeyValueData Status to one successes action with updating", func() {
 			By("Creating new KeyValueData successfully")
 			keyValueData := &v1beta1.KeyValueData{
 				TypeMeta: metav1.TypeMeta{
@@ -63,9 +63,7 @@ var _ = Describe("KeyValueData controller", func() {
 			keyValueDataLookupKey := types.NamespacedName{Name: KeyValueDataName, Namespace: KeyValueDataNamespace}
 			createdKeyValueData := v1beta1.KeyValueData{}
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
-			if err != nil {
-				panic(err)
-			}
+			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
 				if err != nil {
@@ -82,6 +80,150 @@ var _ = Describe("KeyValueData controller", func() {
 				Status:         v1beta1.SuccessStatus,
 				Reason:         "",
 				Message:        "",
+				LastInsertTime: createdKeyValueData.Status.Conditions[0].LastInsertTime,
+			}))
+		})
+
+		It("Should change KeyValueData Status to 2 unsuccessful actions wih deletion", func() {
+			By("Creating new KeyValueData and delete after it")
+			keyValueData := &v1beta1.KeyValueData{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KeyValueData",
+					APIVersion: "key-value.teamdev.com/v1beta1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      KeyValueDataName,
+					Namespace: KeyValueDataNamespace,
+				},
+				Spec: v1beta1.KeyValueDataSpec{
+					Data: map[string]string{
+						"test-key-string": "test-value-string",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Succeed())
+
+			keyValueDataLookupKey := types.NamespacedName{Name: KeyValueDataName, Namespace: KeyValueDataNamespace}
+			createdKeyValueData := v1beta1.KeyValueData{}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
+			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
+			Expect(len(createdKeyValueData.Status.Conditions)).To(Equal(len(keyValueData.Spec.Data)))
+			Expect(*createdKeyValueData.Status.Conditions[0]).To(Equal(v1beta1.Condition{
+				Key:            "test-key-string",
+				Type:           v1beta1.FailedType,
+				Status:         v1beta1.FailedStatus,
+				Reason:         "",
+				Message:        "500 Internal Server Error",
+				LastInsertTime: createdKeyValueData.Status.Conditions[0].LastInsertTime,
+			}))
+
+			createdKeyValueData.Spec = v1beta1.KeyValueDataSpec{
+				Data: map[string]string{
+					"test-key-string1": "test-value-string1",
+				},
+			}
+			Expect(k8sClient.Update(ctx, &createdKeyValueData)).Should(Succeed())
+
+			createdKeyValueData = v1beta1.KeyValueData{}
+			_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
+			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
+			Expect(len(createdKeyValueData.Status.Conditions)).To(Equal(len(keyValueData.Spec.Data)))
+			Expect(*createdKeyValueData.Status.Conditions[0]).To(Equal(v1beta1.Condition{
+				Key:            "test-key-string1",
+				Type:           v1beta1.FailedType,
+				Status:         v1beta1.FailedStatus,
+				Reason:         "",
+				Message:        "500 Internal Server Error",
+				LastInsertTime: createdKeyValueData.Status.Conditions[0].LastInsertTime,
+			}))
+		})
+
+		It("Should change KeyValueData Status to 2 unsuccessful actions", func() {
+			By("Creating new KeyValueData and update after it")
+			keyValueData := &v1beta1.KeyValueData{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KeyValueData",
+					APIVersion: "key-value.teamdev.com/v1beta1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      KeyValueDataName,
+					Namespace: KeyValueDataNamespace,
+				},
+				Spec: v1beta1.KeyValueDataSpec{
+					Data: map[string]string{
+						"test-key-string": "test-value-string",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, keyValueData)).Should(Succeed())
+
+			keyValueDataLookupKey := types.NamespacedName{Name: KeyValueDataName, Namespace: KeyValueDataNamespace}
+			createdKeyValueData := v1beta1.KeyValueData{}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
+			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
+			Expect(len(createdKeyValueData.Status.Conditions)).To(Equal(len(keyValueData.Spec.Data)))
+			Expect(*createdKeyValueData.Status.Conditions[0]).To(Equal(v1beta1.Condition{
+				Key:            "test-key-string",
+				Type:           v1beta1.FailedType,
+				Status:         v1beta1.FailedStatus,
+				Reason:         "",
+				Message:        "500 Internal Server Error",
+				LastInsertTime: createdKeyValueData.Status.Conditions[0].LastInsertTime,
+			}))
+
+			createdKeyValueData.Spec = v1beta1.KeyValueDataSpec{
+				Data: map[string]string{
+					"test-key-string": "test-value-string1",
+				},
+			}
+			Expect(k8sClient.Update(ctx, &createdKeyValueData)).Should(Succeed())
+
+			createdKeyValueData = v1beta1.KeyValueData{}
+			_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: keyValueDataLookupKey})
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, keyValueDataLookupKey, &createdKeyValueData)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(*createdKeyValueData.Status.SuccessSends).To(Equal(int32(0)))
+			Expect(*createdKeyValueData.Status.FailedSends).To(Equal(int32(1)))
+			Expect(len(createdKeyValueData.Status.Conditions)).To(Equal(len(keyValueData.Spec.Data)))
+			Expect(*createdKeyValueData.Status.Conditions[0]).To(Equal(v1beta1.Condition{
+				Key:            "test-key-string",
+				Type:           v1beta1.FailedType,
+				Status:         v1beta1.FailedStatus,
+				Reason:         "",
+				Message:        "500 Internal Server Error",
 				LastInsertTime: createdKeyValueData.Status.Conditions[0].LastInsertTime,
 			}))
 		})

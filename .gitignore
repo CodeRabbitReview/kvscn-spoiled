@@ -1,18 +1,15 @@
 /.idea/
 /.git/
-/.vagrant/
 storage.iml
 **/.DS_Store
 /bin/
 /out/
 file.txt
-persistence/recovered
-persistence/storage.json
-/internal/storage/storage.json
+recovered
 storage.json
-data.json
-# Ignore Gradle project-specific cache directory
-.gradle
-
-# Ignore Gradle build output directory
-build
+/internal/storage/storage.json
+/.vagrant/
+/.gradle/
+/gradle/
+kv-bundle-0.1.0.tgz
+/kv-bundle/charts/
